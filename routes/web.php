@@ -49,4 +49,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/nota/instansi/{id}', [InstansiController::class, 'cetakNotaInstansi']);
 
     Route::get('/admin/instansi/{id}/kwitansi', [InstansiController::class, 'cetakKwitansi']);
+
+    // ==========================================
+    // PORTAL KHUSUS INSTANSI (B2B ONLINE BON)
+    // ==========================================
+    Route::get('/portal-instansi', [InstansiController::class, 'portal']);
+    Route::post('/portal-instansi/cart', [InstansiController::class, 'addToCart']);
+    Route::delete('/portal-instansi/cart/{id}', [InstansiController::class, 'removeFromCart']);
+    Route::post('/portal-instansi/checkout', [InstansiController::class, 'checkoutCart']);
 });

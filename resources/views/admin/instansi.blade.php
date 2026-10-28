@@ -106,8 +106,8 @@
                             </td>
                             <td class="p-4 text-center">
                                 <div class="flex flex-col items-center gap-1.5">
-                                    <a href="/admin/instansi/{{ $ins->id }}/laporan" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 py-1.5 rounded text-xs transition w-full text-center">
-                                        📄 Cek Bon
+                                    <a href="/admin/instansi/{{ $ins->id }}/laporan" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded text-xs transition">
+                                        📋 Buku Tagihan & Order
                                     </a>
                                     <form action="/admin/instansi/{{ $ins->id }}" method="POST" onsubmit="return confirm('Hapus akun instansi {{ addslashes($ins->name) }}?')">
                                         @csrf

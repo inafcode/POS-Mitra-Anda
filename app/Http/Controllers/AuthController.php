@@ -14,15 +14,19 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
+        $credentials =$request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        if (Auth::attempt($credentials)) {$request->session()->regenerate();
 
-            // Semua diarahkan ke admin/kasir utama karena portal instansi sudah ditiadakan
+            // Jika yang login adalah instansi, arahkan ke dashboard portal instansi
+            if (Auth::user()->role === 'instansi') {
+                return redirect('/portal-instansi');
+            }
+
+            // Jika Admin / Kasir, masuk ke gudang
             return redirect()->intended('/admin');
         }
 

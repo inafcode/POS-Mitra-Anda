@@ -49,7 +49,7 @@
 
             <!-- Total Akumulasi Sisa Bon Belum Lunas (Semua Bulan) -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                <span class="text-xs font-bold text-gray-400 uppercase block">Total Akumulasi Sisa Bon (Aktif)</span>
+                <div class="text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">Total Tagihan Aktif (Belum Lunas)</div>
                 <span class="text-2xl font-black text-red-600">Rp{{ number_format($totalHutangAktif, 0, ',', '.') }}</span>
                 <span class="block text-[10px] text-gray-400">Termasuk tunggakan bulan lalu (jika ada)</span>
             </div>
@@ -70,8 +70,8 @@
             <!-- Bar Aksi Simpan Perubahan Status (Centang / Undo) -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap justify-between items-center gap-4 mb-6">
                 <div>
-                    <h3 class="font-black text-slate-800 text-sm">Pengaturan Status Bon (Centang untuk Lunas)</h3>
-                    <p class="text-xs text-gray-500">Centang kotak pada nota yang dibayar, hilangkan centang untuk meng-undo, lalu klik Simpan.</p>
+                    <h3 class="font-black text-slate-800 text-lg">Manajemen Pembayaran & Order</h3>
+                    <p class="text-xs text-gray-500 mt-1">Centang kotak pada nota untuk menandainya sebagai LUNAS, atau hilangkan centang untuk membatalkan.</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <button type="button" id="btnCheckAll" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-lg text-sm transition">
@@ -90,7 +90,10 @@
             <!-- Tabel Riwayat Nota / Bon Berdasarkan Bulan -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="p-4 bg-slate-50 border-b border-gray-200 flex justify-between items-center">
-                    <h2 class="font-black text-slate-800">Daftar Transaksi Bon Periode: {{ date('F Y', strtotime($bulanPilih . '-01')) }} ({{ $transactions->count() }})</h2>
+                    <h3 class="font-bold text-slate-800 p-4 border-b">
+                        Riwayat Transaksi & Order Periode: {{ date('F Y', strtotime($bulanPilih . '-01')) }} 
+                        ({{ $transactions->count() }})
+                    </h3>                
                 </div>
                 <table class="w-full text-left border-collapse text-sm">
                     <thead>
@@ -156,7 +159,9 @@
                                 <td class="p-3.5 text-center align-middle">
                                     @if($index === 0)
                                         <div class="flex justify-center items-center gap-2">
-                                            <span class="px-2.5 py-1 rounded font-black text-[10px] uppercase {{ $trx->status_pembayaran === 'Lunas' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700' }}">
+                                            <span class="px-2.5 py-1 rounded font-black text-[10px] uppercase 
+                                                {{ $trx->status_pembayaran === 'Lunas' ? 'bg-emerald-100 text-emerald-700' : 
+                                                ($trx->status_pembayaran === 'Menunggu Pembayaran' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700') }}">
                                                 {{ $trx->status_pembayaran }}
                                             </span>
                                             <a href="/admin/nota/instansi/{{ $trx->id }}" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-2.5 py-1 rounded text-xs transition">
