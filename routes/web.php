@@ -25,3 +25,6 @@ Route::get('/laporan', [PosController::class, 'laporan']);
 Route::post('/laporan/cashflow', [PosController::class, 'simpanCashflow']);
 Route::post('/laporan/pengeluaran', [PosController::class, 'tambahPengeluaran']);
 Route::delete('/laporan/pengeluaran/{id}', [PosController::class, 'hapusPengeluaran']);
+
+Route::delete('/laporan/detail/{id}', [PosController::class, 'hapusDetailTransaksi']);
+Route::get('/laporan/export', [PosController::class, 'exportExcel']);

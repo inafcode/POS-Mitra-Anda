@@ -33,7 +33,17 @@
 
         <!-- Alarm Peringatan Stok Menipis (Kurang dari 10) -->
         @php
-            $stokTipis = $products->where('tipe', 'Barang')->where('stok', '<', 10);
+            $stokTipis = $products->filter(function($item) {
+                if ($item->tipe !== 'Barang') return false;
+                
+                // Jika milik Kado Koeni, beri peringatan HANYA saat stok habis (0)
+                if ($item->pemilik === 'Kado Koeni') {
+                    return $item->stok <= 0;
+                }
+                
+                // Jika milik Mitra Anda (ATK), beri peringatan saat stok di bawah 5
+                return $item->stok < 5;
+            });
         @endphp
 
         @if($stokTipis->count() > 0)

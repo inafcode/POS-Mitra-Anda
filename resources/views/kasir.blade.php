@@ -28,6 +28,7 @@
 
         <div class="flex gap-2">
             <a href="/admin" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm font-medium transition">Ke Gudang</a>
+            <a href="/laporan" class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded text-sm font-medium transition">Laporan Cashflow</a>
             <a href="/" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm font-medium transition">Lihat Pintu Depan</a>
         </div>
     </header>

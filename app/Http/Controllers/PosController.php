@@ -196,4 +196,83 @@ class PosController extends Controller
         Expense::findOrFail($id)->delete();
         return back()->with('success', 'Pengeluaran dihapus!');
     }
+
+    // Hapus Item Transaksi (Void) & Kembalikan Stok ke Gudang Otomatis
+    public function hapusDetailTransaksi($id)
+    {
+        $detail = TransactionDetail::findOrFail($id);
+
+        // 1. Kembalikan stok barang ke gudang jika tipenya 'Barang'
+        if ($detail->product_id) {
+            $product = Product::find($detail->product_id);
+            if ($product && $product->tipe == 'Barang') {
+                $product->stok = $product->stok + $detail->qty;
+                $product->save();
+            }
+        }
+
+        // 2. Perbarui atau hapus Nota Utama (Transaction)
+        $trx = Transaction::find($detail->transaction_id);
+        $detail->delete(); // Hapus rincian barang
+
+        if ($trx) {
+            // Cek apakah masih ada barang lain di nota yang sama
+            $sisaBarang = TransactionDetail::where('transaction_id', $trx->id)->count();
+            if ($sisaBarang == 0) {
+                $trx->delete(); // Jika nota sudah kosong, hapus notanya sekalian
+            } else {
+                // Jika masih ada barang lain, kurangi total_bayar di nota utama
+                $trx->total_bayar = TransactionDetail::where('transaction_id', $trx->id)->sum('subtotal');
+                $trx->save();
+            }
+        }
+
+        return back()->with('success', 'Item transaksi berhasil dibatalkan & stok gudang telah dikembalikan!');
+    }
+
+    // Export Laporan Cashflow Harian ke File Excel (.xls) Persis Format Asli
+    public function exportExcel(Request $request)
+    {
+        $tanggal = $request->query('tanggal', date('Y-m-d'));
+
+        $details = TransactionDetail::with('transaction')
+                    ->whereDate('created_at', $tanggal)
+                    ->latest()
+                    ->get();
+
+        $detailsTunai = $details->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
+        $pemasukanKado = $detailsTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
+        $pemasukanMitra = $detailsTunai->where('pemilik', 'Mitra Anda')->sum('subtotal');
+
+        $expenses = Expense::whereDate('tanggal', $tanggal)->get();
+        $pengeluaranKado = $expenses->where('pemilik', 'Kado Koeni')->sum('nominal');
+        $pengeluaranMitra = $expenses->where('pemilik', 'Mitra Anda')->sum('nominal');
+
+        $cashflow = DailyCashflow::where('tanggal', $tanggal)->first();
+        $modalAwalKado = $cashflow ? $cashflow->modal_awal_kado : 0;
+        $modalAwalMitra = $cashflow ? $cashflow->modal_awal_mitra : 0;
+        $hasilKado = $cashflow ? $cashflow->hasil_diambil_kado : 0;
+        $hasilMitra = $cashflow ? $cashflow->hasil_diambil_mitra : 0;
+
+        $totalKado = $modalAwalKado + $pemasukanKado - $pengeluaranKado;
+        $totalMitra = $modalAwalMitra + $pemasukanMitra - $pengeluaranMitra;
+        $grandTotal = $totalKado + $totalMitra;
+
+        $sisaModalKado = $totalKado - $hasilKado;
+        $sisaModalMitra = $totalMitra - $hasilMitra;
+        $totalSisaModal = $sisaModalKado + $sisaModalMitra;
+
+        $namaFile = 'Cashflow_' . date('d_m_Y', strtotime($tanggal)) . '.xls';
+
+        return response()->view('laporan_excel', compact(
+            'tanggal', 'details', 'expenses',
+            'modalAwalKado', 'modalAwalMitra',
+            'pemasukanKado', 'pemasukanMitra',
+            'pengeluaranKado', 'pengeluaranMitra',
+            'totalKado', 'totalMitra', 'grandTotal',
+            'hasilKado', 'hasilMitra',
+            'sisaModalKado', 'sisaModalMitra', 'totalSisaModal'
+        ))->header('Content-Type', 'application/vnd.ms-excel')
+          ->header('Content-Disposition', 'attachment; filename="' . $namaFile . '"');
+    }
 }

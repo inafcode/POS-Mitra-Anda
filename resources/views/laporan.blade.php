@@ -23,9 +23,12 @@
             </form>
 
             <div class="flex gap-2">
-                <a href="/kasir" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded text-sm shadow-sm">Ke Kasir</a>
-                <a href="/admin" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded text-sm shadow-sm">Ke Gudang</a>
-            </div>
+             <a href="/laporan/export?tanggal={{ $tanggal }}" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded text-sm shadow-sm flex items-center gap-1">
+                 📥 Export Excel
+             </a>
+             <a href="/kasir" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-4 py-2 rounded text-sm shadow-sm">Ke Kasir</a>
+             <a href="/admin" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded text-sm shadow-sm">Ke Gudang</a>
+         </div>
         </div>
 
         @if(session('success'))
@@ -47,7 +50,8 @@
                         <th class="p-2 border-r border-gray-300 text-center">Satuan</th>
                         <th class="p-2 border-r border-gray-300 text-right">Harga</th>
                         <th class="p-2 border-r border-gray-300 text-right">SubTotal</th>
-                        <th class="p-2 text-center">Tanggal Transaksi</th>
+                        <th class="p-2 border-r border-gray-300 text-center">Tanggal Transaksi</th>
+                        <th class="p-2 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,24 +60,33 @@
                     <tr class="border-b border-gray-300 {{ $d->pemilik == 'Kado Koeni' ? 'bg-[#ffff00] font-medium' : 'bg-white' }}">
                         <td class="p-2 border-r border-gray-300 font-mono">#{{ $d->id + 8000 }}</td>
                         <td class="p-2 border-r border-gray-300 font-mono font-bold">
-                         {{ $d->transaction->kode_nota ?? '-' }}
-                         @if(($d->transaction->metode_pembayaran ?? 'Tunai') !== 'Tunai')
-                             <span class="ml-1 px-1.5 py-0.5 text-[10px] bg-cyan-600 text-white rounded font-sans">
-                                 {{ strtoupper($d->transaction->metode_pembayaran) }} - REKENING
-                             </span>
-                         @endif
-                     </td>
+                            {{ $d->transaction->kode_nota ?? '-' }}
+                            @if(($d->transaction->metode_pembayaran ?? 'Tunai') !== 'Tunai')
+                                <span class="ml-1 px-1.5 py-0.5 text-[10px] bg-cyan-600 text-white rounded font-sans">
+                                    {{ strtoupper($d->transaction->metode_pembayaran) }} - REKENING
+                                </span>
+                            @endif
+                        </td>
                         <td class="p-2 border-r border-gray-300">{{ $d->nama_item }}</td>
                         <td class="p-2 border-r border-gray-300 text-center text-xs font-bold">{{ $d->pemilik }}</td>
                         <td class="p-2 border-r border-gray-300 text-center">{{ $d->qty }}</td>
                         <td class="p-2 border-r border-gray-300 text-center">{{ $d->satuan ?? 'pcs' }}</td>
                         <td class="p-2 border-r border-gray-300 text-right">Rp{{ number_format($d->harga_jual, 0, ',', '.') }}</td>
                         <td class="p-2 border-r border-gray-300 text-right font-bold">Rp{{ number_format($d->subtotal, 0, ',', '.') }}</td>
-                        <td class="p-2 text-center font-mono text-xs">{{ $d->created_at->format('d/m/Y H:i:s') }}</td>
+                        <td class="p-2 border-r border-gray-300 text-center font-mono text-xs">{{ $d->created_at->format('d/m/Y H:i:s') }}</td>
+                        <td class="p-2 text-center">
+                            <form action="/laporan/detail/{{ $d->id }}" method="POST" onsubmit="return confirm('Batalkan penjualan {{ addslashes($d->nama_item) }}? Stok barang akan dikembalikan ke gudang.')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2 py-0.5 rounded text-xs shadow-sm">
+                                    Batal / Hapus
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="9" class="p-6 text-center text-gray-500">Belum ada barang terjual pada tanggal ini.</td>
+                        <td colspan="10" class="p-6 text-center text-gray-500">Belum ada barang terjual pada tanggal ini.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -155,9 +168,13 @@
                             <tr class="border-b border-gray-300">
                                 <td class="p-2 border-r border-gray-300 font-semibold text-xs">{{ $exp->pemilik }}</td>
                                 <td class="p-2 border-r border-gray-300">{{ $exp->keterangan }}</td>
-                                <td class="p-2 text-right font-bold">
-                                    Rp {{ number_format($exp->nominal, 0, ',', '.') }}
-                                    <button type="button" onclick="hapusPengeluaran({{ $exp->id }})" class="ml-2 text-red-500 hover:text-red-700 font-black text-xs" title="Hapus">[X]</button>
+                                <td class="p-2 text-right font-bold flex justify-end items-center gap-2">
+                                    <span>Rp {{ number_format($exp->nominal, 0, ',', '.') }}</span>
+                                    <form action="/laporan/pengeluaran/{{ $exp->id }}" method="POST" onsubmit="return confirm('Hapus catatan pengeluaran {{ addslashes($exp->keterangan) }}?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-red-500 hover:text-red-700 font-black text-xs" title="Hapus">[X]</button>
+                                    </form>
                                 </td>
                             </tr>
                             @empty
@@ -238,14 +255,22 @@
         @method('DELETE')
     </form>
     <script>
-        function hapusPengeluaran(id) {
-            if (confirm('Hapus catatan pengeluaran ini?')) {
-                let form = document.getElementById('form-hapus-exp');
-                form.action = '/laporan/pengeluaran/' + id;
-                form.submit();
-            }
-        }
-    </script>
+     function hapusPengeluaran(id) {
+         if (confirm('Hapus catatan pengeluaran ini?')) {
+             let form = document.getElementById('form-hapus-exp');
+             form.action = '/laporan/pengeluaran/' + id;
+             form.submit();
+         }
+     }
+
+     function hapusTransaksi(id, namaBarang) {
+         if (confirm('Batalkan penjualan "' + namaBarang + '"? Stok barang akan otomatis dikembalikan ke gudang dan pemasukan akan disesuaikan.')) {
+             let form = document.getElementById('form-hapus-trx');
+             form.action = '/laporan/detail/' + id;
+             form.submit();
+         }
+     }
+ </script>
 
 </body>
 </html>
