@@ -19,3 +19,9 @@ Route::resource('/admin', AdminController::class);
 
 // Jalur untuk mencetak struk kasir
 Route::post('/kasir/cetak', [PosController::class, 'cetak']);
+
+// Jalur Laporan Cashflow & Bagi Hasil
+Route::get('/laporan', [PosController::class, 'laporan']);
+Route::post('/laporan/cashflow', [PosController::class, 'simpanCashflow']);
+Route::post('/laporan/pengeluaran', [PosController::class, 'tambahPengeluaran']);
+Route::delete('/laporan/pengeluaran/{id}', [PosController::class, 'hapusPengeluaran']);

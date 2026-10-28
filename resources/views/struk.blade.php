@@ -53,19 +53,19 @@
     <div class="garis"></div>
 
     <table>
-        <tr class="bold text-right" style="font-size: 14px;">
-            <td>TOTAL:</td>
-            <td>Rp{{ number_format($totalBayar, 0, ',', '.') }}</td>
-        </tr>
-        <tr class="text-right">
-            <td>TUNAI:</td>
-            <td>Rp{{ number_format($uangTunai, 0, ',', '.') }}</td>
-        </tr>
-        <tr class="bold text-right">
-            <td>KEMBALI:</td>
-            <td>Rp{{ number_format($kembalian, 0, ',', '.') }}</td>
-        </tr>
-    </table>
+     <tr class="bold text-right" style="font-size: 14px;">
+         <td>TOTAL:</td>
+         <td>Rp{{ number_format($totalBayar, 0, ',', '.') }}</td>
+     </tr>
+     <tr class="text-right">
+         <td>BAYAR ({{ strtoupper($metodePembayaran ?? 'TUNAI') }}):</td>
+         <td>Rp{{ number_format($uangTunai, 0, ',', '.') }}</td>
+     </tr>
+     <tr class="bold text-right">
+         <td>KEMBALI:</td>
+         <td>Rp{{ number_format($kembalian, 0, ',', '.') }}</td>
+     </tr>
+ </table>
 
     <div class="garis"></div>
     

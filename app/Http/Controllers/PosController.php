@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\Transaction;
+use App\Models\TransactionDetail;
+use App\Models\Expense;
+use App\Models\DailyCashflow;
 
 class PosController extends Controller
 {
@@ -36,23 +40,160 @@ class PosController extends Controller
         return response()->json($products);
     }
 
-    // Fungsi untuk mencetak struk & memotong stok
+    // Fungsi cetak struk + simpan riwayat transaksi + potong stok
     public function cetak(Request $request)
     {
         $cartData = json_decode($request->cart_data, true);
         $totalBayar = $request->total_bayar;
         $uangTunai = $request->uang_tunai;
         $kembalian = $request->kembalian;
+        $metodePembayaran = $request->metode_pembayaran ?? 'Tunai';
+
+        // Buat ID Transaksi berurutan (#4801, #4802, dst) dan anti-kembar
+        $nextId = (Transaction::max('id') ?? 0) + 1;
+        $kodeNota = '#' . (4800 + $nextId);
+
+        $trx = Transaction::create([
+            'kode_nota' => $kodeNota,
+            'metode_pembayaran' => $metodePembayaran,
+            'total_bayar' => $totalBayar,
+            'uang_tunai' => $uangTunai,
+            'kembalian' => $kembalian,
+        ]);
         
-        // MESIN POTONG STOK OTOMATIS
         foreach ($cartData as $item) {
             $product = Product::find($item['id']);
+            $pemilik = $product ? $product->pemilik : 'Mitra Anda';
+            $satuan = $product ? $product->satuan : 'pcs';
+
+            TransactionDetail::create([
+                'transaction_id' => $trx->id,
+                'product_id' => $item['id'],
+                'nama_item' => $item['nama_item'],
+                'pemilik' => $pemilik,
+                'qty' => $item['qty'],
+                'satuan' => $satuan,
+                'harga_jual' => $item['harga'],
+                'subtotal' => $item['subtotal'],
+            ]);
+
             if ($product && $product->tipe == 'Barang') {
                 $product->stok = $product->stok - $item['qty'];
                 $product->save();
             }
         }
         
-        return view('struk', compact('cartData', 'totalBayar', 'uangTunai', 'kembalian'));
+        return view('struk', compact('cartData', 'totalBayar', 'uangTunai', 'kembalian', 'kodeNota', 'metodePembayaran'));
+    }
+
+    // Halaman Laporan Cashflow Persis Format Excel (Murni Laci Tunai + Info Non-Tunai)
+    public function laporan(Request $request)
+    {
+        $tanggal = $request->query('tanggal', date('Y-m-d'));
+
+        // 1. Ambil Semua Detail Transaksi pada tanggal tersebut
+        $details = TransactionDetail::with('transaction')
+                    ->whereDate('created_at', $tanggal)
+                    ->latest()
+                    ->get();
+
+        // 2. Filter HANYA transaksi TUNAI untuk dihitung ke Cashflow Laci
+        $detailsTunai = $details->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
+        $pemasukanKado = $detailsTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
+        $pemasukanMitra = $detailsTunai->where('pemilik', 'Mitra Anda')->sum('subtotal');
+
+        // 2B. Hitung Info Tambahan untuk yang masuk via QRIS / Transfer (Rekening Masing-Masing)
+        $detailsNonTunai = $details->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') !== 'Tunai');
+        $nonTunaiKado = $detailsNonTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
+        $nonTunaiMitra = $detailsNonTunai->where('pemilik', 'Mitra Anda')->sum('subtotal');
+
+        // 3. Ambil Pengeluaran pada tanggal tersebut
+        $expenses = Expense::whereDate('tanggal', $tanggal)->get();
+        $pengeluaranKado = $expenses->where('pemilik', 'Kado Koeni')->sum('nominal');
+        $pengeluaranMitra = $expenses->where('pemilik', 'Mitra Anda')->sum('nominal');
+
+        // 4. Cek Data Cashflow Hari Ini (Jika belum ada, tarik Sisa Modal Tunai dari Hari Sebelumnya!)
+        $cashflow = DailyCashflow::where('tanggal', $tanggal)->first();
+
+        if (!$cashflow) {
+            $kemarin = DailyCashflow::where('tanggal', '<', $tanggal)->orderBy('tanggal', 'desc')->first();
+
+            if ($kemarin) {
+                $detailsKemarinTunai = TransactionDetail::with('transaction')
+                    ->whereDate('created_at', $kemarin->tanggal)
+                    ->get()
+                    ->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
+
+                $masukKadoKemarin = $detailsKemarinTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
+                $keluarKadoKemarin = Expense::whereDate('tanggal', $kemarin->tanggal)->where('pemilik', 'Kado Koeni')->sum('nominal');
+                $sisaModalKadoKemarin = ($kemarin->modal_awal_kado + $masukKadoKemarin - $keluarKadoKemarin) - $kemarin->hasil_diambil_kado;
+
+                $masukMitraKemarin = $detailsKemarinTunai->where('pemilik', 'Mitra Anda')->sum('subtotal');
+                $keluarMitraKemarin = Expense::whereDate('tanggal', $kemarin->tanggal)->where('pemilik', 'Mitra Anda')->sum('nominal');
+                $sisaModalMitraKemarin = ($kemarin->modal_awal_mitra + $masukMitraKemarin - $keluarMitraKemarin) - $kemarin->hasil_diambil_mitra;
+            } else {
+                $sisaModalKadoKemarin = 0;
+                $sisaModalMitraKemarin = 0;
+            }
+
+            $cashflow = DailyCashflow::create([
+                'tanggal' => $tanggal,
+                'modal_awal_kado' => $sisaModalKadoKemarin,
+                'modal_awal_mitra' => $sisaModalMitraKemarin,
+                'hasil_diambil_kado' => 0,
+                'hasil_diambil_mitra' => 0,
+            ]);
+        }
+
+        // 5. Rumus Perhitungan Tabel Bawah (Murni Uang Tunai di Laci)
+        $totalKado = $cashflow->modal_awal_kado + $pemasukanKado - $pengeluaranKado;
+        $totalMitra = $cashflow->modal_awal_mitra + $pemasukanMitra - $pengeluaranMitra;
+        $grandTotal = $totalKado + $totalMitra;
+
+        $sisaModalKado = $totalKado - $cashflow->hasil_diambil_kado;
+        $sisaModalMitra = $totalMitra - $cashflow->hasil_diambil_mitra;
+        $totalSisaModal = $sisaModalKado + $sisaModalMitra;
+
+        return view('laporan', compact(
+            'tanggal', 'details', 'expenses', 'cashflow',
+            'pemasukanKado', 'pemasukanMitra',
+            'nonTunaiKado', 'nonTunaiMitra',
+            'pengeluaranKado', 'pengeluaranMitra',
+            'totalKado', 'totalMitra', 'grandTotal',
+            'sisaModalKado', 'sisaModalMitra', 'totalSisaModal'
+        ));
+    }
+
+    // Simpan Perubahan Modal Awal & Hasil yang Diambil
+    public function simpanCashflow(Request $request)
+    {
+        $cashflow = DailyCashflow::where('tanggal', $request->tanggal)->firstOrFail();
+        $cashflow->update([
+            'modal_awal_kado' => $request->modal_awal_kado ?? 0,
+            'modal_awal_mitra' => $request->modal_awal_mitra ?? 0,
+            'hasil_diambil_kado' => $request->hasil_diambil_kado ?? 0,
+            'hasil_diambil_mitra' => $request->hasil_diambil_mitra ?? 0,
+        ]);
+
+        return back()->with('success', 'Perhitungan Bagi Hasil & Sisa Modal berhasil disimpan!');
+    }
+
+    // Tambah Pengeluaran Harian (Misal: Laundry)
+    public function tambahPengeluaran(Request $request)
+    {
+        Expense::create([
+            'tanggal' => $request->tanggal,
+            'pemilik' => $request->pemilik,
+            'keterangan' => $request->keterangan,
+            'nominal' => $request->nominal,
+        ]);
+        return back()->with('success', 'Catatan pengeluaran berhasil ditambahkan!');
+    }
+
+    // Hapus Pengeluaran
+    public function hapusPengeluaran($id)
+    {
+        Expense::findOrFail($id)->delete();
+        return back()->with('success', 'Pengeluaran dihapus!');
     }
 }

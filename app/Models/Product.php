@@ -12,6 +12,7 @@ class Product extends Model
         'barcode',
         'foto_produk',
         'nama_item',
+        'pemilik',
         'tipe',
         'kategori',
         'satuan',

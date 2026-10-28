@@ -60,6 +60,7 @@
         <input type="hidden" name="total_bayar" id="input-total-bayar">
         <input type="hidden" name="uang_tunai" id="input-uang-tunai">
         <input type="hidden" name="kembalian" id="input-kembalian">
+        <input type="hidden" name="metode_pembayaran" id="input-metode-pembayaran">
     </form>
 
     <!-- Panel Pembayaran Bawah (Footer) -->
@@ -73,12 +74,21 @@
             </div>
 
             <!-- Input Uang Tunai & Kembalian -->
-            <div class="flex items-center gap-6 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700">
+            <!-- Pilihan Metode Pembayaran, Uang Tunai & Kembalian -->
+            <div class="flex items-center gap-5 bg-slate-800 px-5 py-2 rounded-lg border border-slate-700">
                 <div>
-                    <label class="text-slate-300 text-xs uppercase font-bold block mb-1">Uang Tunai (Rp)</label>
-                    <input type="number" id="uang-tunai" oninput="hitungKembalian()" placeholder="0" class="w-40 bg-white text-slate-900 font-extrabold text-xl px-3 py-1 rounded outline-none focus:ring-2 focus:ring-blue-500">
+                    <label class="text-amber-400 text-xs uppercase font-bold block mb-1">Metode Bayar</label>
+                    <select id="pilih-metode" onchange="ubahMetodeBayar()" class="bg-slate-900 text-white border border-slate-600 font-bold text-base px-3 py-1.5 rounded outline-none focus:ring-2 focus:ring-amber-400">
+                        <option value="Tunai">💵 TUNAI (Laci)</option>
+                        <option value="QRIS">📱 QRIS (Rekening)</option>
+                        <option value="Transfer">🏦 TRANSFER (Rekening)</option>
+                    </select>
                 </div>
-                <div class="border-l border-slate-600 pl-6">
+                <div class="border-l border-slate-600 pl-5">
+                    <label id="judul-input-uang" class="text-slate-300 text-xs uppercase font-bold block mb-1">Uang Tunai (Rp)</label>
+                    <input type="number" id="uang-tunai" oninput="hitungKembalian()" placeholder="0" class="w-36 bg-white text-slate-900 font-extrabold text-xl px-3 py-1 rounded outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="border-l border-slate-600 pl-5">
                     <span class="text-slate-400 text-xs uppercase font-bold block mb-1">Kembalian</span>
                     <span id="label-kembalian" class="text-2xl font-black text-amber-400">Rp 0</span>
                 </div>
@@ -265,14 +275,47 @@
             hitungKembalian();
         }
 
-        // 5. Fungsi Menghitung Kembalian Secara Real-Time
+        // 5A. Fungsi Saat Kasir Mengubah Metode Pembayaran (Tunai / QRIS / Transfer)
+        function ubahMetodeBayar() {
+            let metode = document.getElementById('pilih-metode').value;
+            let inputUang = document.getElementById('uang-tunai');
+            let judulUang = document.getElementById('judul-input-uang');
+
+            if (metode === 'Tunai') {
+                judulUang.innerText = 'Uang Tunai (Rp)';
+                inputUang.readOnly = false;
+                inputUang.classList.remove('bg-slate-300');
+                inputUang.classList.add('bg-white');
+                inputUang.value = '';
+            } else {
+                // Jika QRIS atau Transfer, otomatis isi nominal pas & kunci input
+                judulUang.innerText = 'Nominal ' + metode + ' (Pas)';
+                inputUang.value = totalTagihanSaatIni;
+                inputUang.readOnly = true;
+                inputUang.classList.remove('bg-white');
+                inputUang.classList.add('bg-slate-300');
+            }
+            hitungKembalian();
+        }
+
+        // 5B. Fungsi Menghitung Kembalian Secara Real-Time
         function hitungKembalian() {
-            let inputTunai = document.getElementById('uang-tunai').value;
-            let uangTunai = parseInt(inputTunai) || 0;
+            let metode = document.getElementById('pilih-metode').value;
+            let inputUang = document.getElementById('uang-tunai');
+
+            // Jika sedang mode QRIS/Transfer dan keranjang berubah, samakan terus angkanya
+            if (metode !== 'Tunai') {
+                inputUang.value = totalTagihanSaatIni;
+            }
+
+            let uangTunai = parseInt(inputUang.value) || 0;
             let kembalian = uangTunai - totalTagihanSaatIni;
             let labelKembali = document.getElementById('label-kembalian');
 
-            if (uangTunai === 0) {
+            if (metode !== 'Tunai') {
+                labelKembali.innerText = 'Non-Tunai (Pas)';
+                labelKembali.className = 'text-lg font-extrabold text-cyan-400';
+            } else if (uangTunai === 0) {
                 labelKembali.innerText = 'Rp 0';
                 labelKembali.className = 'text-2xl font-black text-amber-400';
             } else if (kembalian < 0) {
@@ -291,12 +334,17 @@
                 return;
             }
 
+            let metode = document.getElementById('pilih-metode').value;
             let uangTunai = parseInt(document.getElementById('uang-tunai').value) || 0;
 
-            if (uangTunai < totalTagihanSaatIni) {
+            if (metode === 'Tunai' && uangTunai < totalTagihanSaatIni) {
                 alert('Uang tunai kurang dari total tagihan! Silakan masukkan nominal uang yang sesuai.');
                 document.getElementById('uang-tunai').focus();
                 return;
+            }
+
+            if (metode !== 'Tunai') {
+                uangTunai = totalTagihanSaatIni;
             }
 
             let kembalian = uangTunai - totalTagihanSaatIni;
@@ -318,11 +366,14 @@
             document.getElementById('input-total-bayar').value = totalTagihanSaatIni;
             document.getElementById('input-uang-tunai').value = uangTunai;
             document.getElementById('input-kembalian').value = kembalian;
+            document.getElementById('input-metode-pembayaran').value = metode;
 
             document.getElementById('form-bayar').submit();
 
+            // Reset meja kasir kembali ke mode Tunai untuk pembeli berikutnya
             keranjang = [];
-            document.getElementById('uang-tunai').value = '';
+            document.getElementById('pilih-metode').value = 'Tunai';
+            ubahMetodeBayar();
             gambarUlangTabel();
             inputBarcode.focus();
         }

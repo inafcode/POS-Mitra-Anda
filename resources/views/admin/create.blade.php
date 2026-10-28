@@ -45,6 +45,14 @@
                     </select>
                 </div>
 
+                <div>
+                 <label class="block text-sm font-medium text-gray-700 mb-1">Milik Toko <span class="text-red-500">*</span></label>
+                 <select name="pemilik" class="w-full border border-gray-300 rounded-md p-2 bg-yellow-50 font-bold text-slate-800">
+                     <option value="Mitra Anda">🏢 Mitra Anda</option>
+                     <option value="Kado Koeni">🎁 Kado Koeni</option>
+                 </select>
+             </div>
+
                 <!-- Kategori & Satuan -->
                 <div class="grid grid-cols-2 gap-2">
                     <div>
