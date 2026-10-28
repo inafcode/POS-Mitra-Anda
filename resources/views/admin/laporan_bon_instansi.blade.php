@@ -75,11 +75,15 @@
                 </div>
                 <div class="flex items-center gap-3">
                     <button type="button" id="btnCheckAll" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-lg text-sm transition">
-                        ✓ Centang Semua Nota
+                        ✓ Centang Semua
                     </button>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-2.5 rounded-lg shadow text-sm transition">
-                        💾 SIMPAN PERUBAHAN STATUS
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-black px-4 py-2.5 rounded-lg shadow text-sm transition">
+                        💾 SIMPAN PELUNASAN
                     </button>
+                    <!-- Tombol Cetak Kwitansi Tanda Terima -->
+                    <a href="/admin/instansi/{{ $instansi->id }}/kwitansi?bulan={{ $bulanPilih }}" target="_blank" class="bg-slate-800 hover:bg-slate-900 text-amber-400 font-black px-4 py-2.5 rounded-lg shadow text-sm transition border border-slate-700">
+                        🖨️ CETAK KWITANSI
+                    </a>
                 </div>
             </div>
 

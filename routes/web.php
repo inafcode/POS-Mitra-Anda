@@ -47,4 +47,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/admin/instansi/{id}/export', [InstansiController::class, 'exportExcelBon']);
     Route::post('/admin/instansi/{id}/pelunasan-massal', [InstansiController::class, 'prosesPelunasanMassal']);
     Route::get('/admin/nota/instansi/{id}', [InstansiController::class, 'cetakNotaInstansi']);
+
+    Route::get('/admin/instansi/{id}/kwitansi', [InstansiController::class, 'cetakKwitansi']);
 });

@@ -72,16 +72,25 @@ class InstansiController extends Controller
         return back()->with('success', 'Data Mitra Instansi berhasil diperbarui!');
     }
 
-    // 4. Hapus Mitra Instansi
+    // 4. Hapus Mitra Instansi (Dengan Proteksi Tunggakan)
     public function destroy($id)
     {
         $instansi = User::where('role', 'instansi')->findOrFail($id);
-        $instansi->delete();
+        
+        // PROTEKSI GUARD: Cek apakah masih ada tunggakan
+        $adaTunggakan = Transaction::where('instansi_id', $id)
+                            ->where('status_pembayaran', 'Belum Lunas')
+                            ->exists();
+                            
+        if($adaTunggakan) {
+            return back()->with('error', 'Gagal Dihapus! Mitra ini masih memiliki nota bon yang belum lunas. Lunasi terlebih dahulu.');
+        }
 
-        return back()->with('success', 'Mitra Instansi berhasil dihapus!');
+        $instansi->delete();
+        return back()->with('success', 'Mitra Instansi berhasil dihapus dari sistem!');
     }
 
-// Halaman Laporan / Rekap Bon Instansi per Bulan
+    // 5. Halaman Laporan / Rekap Bon Instansi per Bulan (Fungsi yang hilang sebelumnya)
     public function laporanBon(Request $request, $id)
     {
         $instansi = User::where('role', 'instansi')->findOrFail($id);
@@ -89,7 +98,7 @@ class InstansiController extends Controller
         // Ambil filter bulan (format: YYYY-MM), default ke bulan sekarang
         $bulanPilih = $request->query('bulan', date('Y-m'));
 
-        // 1. Ambil transaksi HANYA pada bulan yang dipilih
+        // Ambil transaksi HANYA pada bulan yang dipilih
         $transactions = Transaction::with('details')
                         ->where('instansi_id', $instansi->id)
                         ->where('metode_pembayaran', 'Bon / Tempo')
@@ -98,7 +107,7 @@ class InstansiController extends Controller
                         ->latest()
                         ->get();
 
-        // 2. Total akumulasi seluruh tunggakan aktif yang belum lunas
+        // Total akumulasi seluruh tunggakan aktif yang belum lunas
         $totalHutangAktif = Transaction::where('instansi_id', $instansi->id)
                             ->where('metode_pembayaran', 'Bon / Tempo')
                             ->where('status_pembayaran', 'Belum Lunas')
@@ -113,7 +122,7 @@ class InstansiController extends Controller
         ));
     }
 
-    // Lunasi Bon via Admin
+    // 6. Lunasi Bon Satuan
     public function lunasiBon($id)
     {
         $transaction = Transaction::findOrFail($id);
@@ -122,7 +131,7 @@ class InstansiController extends Controller
         return back()->with('success', 'Nota bon berhasil dilunasi!');
     }
 
-    // Export Excel Rekap Bon
+    // 7. Export Excel Rekap Bon
     public function exportExcelBon(Request $request, $id)
     {
         $instansi = User::where('role', 'instansi')->findOrFail($id);
@@ -143,6 +152,7 @@ class InstansiController extends Controller
             ->header('Content-Disposition', 'attachment; filename="' . $namaFile . '"');
     }
 
+    // 8. Pelunasan Massal Bon (Terikat pada bulan terpilih)
     public function prosesPelunasanMassal(Request $request, $id)
     {
         $notaDipilih = $request->input('nota_ids', []);
@@ -156,23 +166,44 @@ class InstansiController extends Controller
             ->toArray();
 
         if (!empty($notaDipilih)) {
-            Transaction::whereIn('id', $notaDipilih)->update(['status_pembayaran' => 'Lunas']);
+            Transaction::whereIn('id', $notaDipilih)
+                ->update(['status_pembayaran' => 'Lunas']);
         }
 
         $notaTidakDicentang = array_diff($transaksiBulanIni, $notaDipilih);
         if (!empty($notaTidakDicentang)) {
-            Transaction::whereIn('id', $notaTidakDicentang)->update(['status_pembayaran' => 'Belum Lunas']);
+            Transaction::whereIn('id', $notaTidakDicentang)
+                ->update(['status_pembayaran' => 'Belum Lunas']);
         }
 
-        // Ganti return back() dengan redirect langsung ke URL laporan beserta bulannya:
+        // Redirect secara eksplisit ke url beserta bulannya agar halaman langsung terefresh dengan data baru
         return redirect("/admin/instansi/{$id}/laporan?bulan={$bulanPilih}")
             ->with('success', 'Status pembayaran bon periode ' . $bulanPilih . ' berhasil diperbarui!');
     }
 
-    // Cetak Nota Instansi dari Admin
+    // 9. Cetak Nota Instansi dari Admin
     public function cetakNotaInstansi($id)
     {
         $transaction = Transaction::with(['details', 'instansi'])->findOrFail($id);
         return view('admin.cetak_nota_instansi', compact('transaction'));
+    }
+
+    // 10. Cetak Kwitansi Tanda Terima Pelunasan
+    public function cetakKwitansi(Request $request, $id)
+    {
+        $bulanPilih = $request->query('bulan', date('Y-m'));
+        $instansi = User::findOrFail($id);
+        
+        $transactions = Transaction::where('instansi_id', $id)
+            ->where('metode_pembayaran', 'Bon / Tempo')
+            ->where('status_pembayaran', 'Lunas')
+            ->whereYear('created_at', substr($bulanPilih, 0, 4))
+            ->whereMonth('created_at', substr($bulanPilih, 5, 2))
+            ->orderBy('created_at', 'asc')
+            ->get();
+            
+        $totalPelunasan = $transactions->sum('total_bayar');
+
+        return view('admin.kwitansi_pelunasan', compact('instansi', 'transactions', 'bulanPilih', 'totalPelunasan'));
     }
 }
