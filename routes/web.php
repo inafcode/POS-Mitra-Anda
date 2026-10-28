@@ -1,30 +1,50 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\StoreController;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InstansiController;
 
-// Jika ada yang mengunjungi halaman utama (/), arahkan ke StoreController
-Route::get('/', [StoreController::class, 'index']);
+Route::get('/', [AdminController::class, 'catalog']);
 
-// Pintu Belakang (Kasir Toko Fisik)
-Route::get('/kasir', [PosController::class, 'index']);
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
+Route::post('/logout', [AuthController::class, 'logout']);
 
-// Jalur rahasia untuk Barcode Scanner mencari data
-Route::get('/api/search-product', [PosController::class, 'search']);
+Route::middleware(['auth'])->group(function () {
+    
+    // Halaman Kasir
+    Route::get('/kasir', [PosController::class, 'kasir']);
+    Route::get('/api/search-product', [PosController::class, 'search']);
+    Route::post('/kasir/cetak', [PosController::class, 'cetak']);
 
-// Pintu Ruang Admin Gudang (CRUD)
-Route::resource('/admin', AdminController::class);
+    // Halaman Laporan Cashflow & Bagi Hasil
+    Route::get('/laporan', [PosController::class, 'laporan']);
+    Route::post('/laporan/cashflow', [PosController::class, 'simpanCashflow']);
+    Route::post('/laporan/pengeluaran', [PosController::class, 'tambahPengeluaran']);
+    Route::delete('/laporan/pengeluaran/{id}', [PosController::class, 'hapusPengeluaran']);
+    Route::delete('/laporan/detail/{id}', [PosController::class, 'hapusDetailTransaksi']);
+    Route::get('/laporan/export', [PosController::class, 'exportExcel']);
 
-// Jalur untuk mencetak struk kasir
-Route::post('/kasir/cetak', [PosController::class, 'cetak']);
+    // Halaman Gudang Admin (CRUD Produk)
+    Route::get('/admin', [AdminController::class, 'index']);
+    Route::get('/admin/create', [AdminController::class, 'create']);
+    Route::post('/admin', [AdminController::class, 'store']);
+    Route::get('/admin/{id}/edit', [AdminController::class, 'edit']);
+    Route::put('/admin/{id}', [AdminController::class, 'update']);
+    Route::delete('/admin/{id}', [AdminController::class, 'destroy']);
 
-// Jalur Laporan Cashflow & Bagi Hasil
-Route::get('/laporan', [PosController::class, 'laporan']);
-Route::post('/laporan/cashflow', [PosController::class, 'simpanCashflow']);
-Route::post('/laporan/pengeluaran', [PosController::class, 'tambahPengeluaran']);
-Route::delete('/laporan/pengeluaran/{id}', [PosController::class, 'hapusPengeluaran']);
+    // Manajemen Mitra Instansi & Rekap Bon di Panel Admin (Tetap Ada)
+    Route::get('/admin/instansi', [InstansiController::class, 'index']);
+    Route::post('/admin/instansi', [InstansiController::class, 'store']);
+    Route::put('/admin/instansi/{id}', [InstansiController::class, 'update']);
+    Route::delete('/admin/instansi/{id}', [InstansiController::class, 'destroy']);
 
-Route::delete('/laporan/detail/{id}', [PosController::class, 'hapusDetailTransaksi']);
-Route::get('/laporan/export', [PosController::class, 'exportExcel']);
+    Route::get('/admin/instansi/{id}/laporan', [InstansiController::class, 'laporanBon']);
+    Route::post('/admin/transaksi/{id}/lunasi', [InstansiController::class, 'lunasiBon']);
+    Route::get('/admin/instansi/{id}/export', [InstansiController::class, 'exportExcelBon']);
+    Route::post('/admin/instansi/{id}/pelunasan-massal', [InstansiController::class, 'prosesPelunasanMassal']);
+    Route::get('/admin/nota/instansi/{id}', [InstansiController::class, 'cetakNotaInstansi']);
+});

@@ -3,19 +3,35 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Product; // Memanggil Produk (Model) untuk CRUD
+use Illuminate\Support\Facades\Storage; // <--- WAJIB ADA AGAR EDIT/HAPUS FOTO TIDAK ERROR
+use App\Models\Product;
 
 class AdminController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        // Mengambil semua data barang, diurutkan dari yang terbaru
-        $products = Product::latest()->get(); 
-        
-        return view('admin.index', compact('products'));
+        $search = $request->query('search');
+        $pemilik = $request->query('pemilik');
+
+        $query = Product::query();
+
+        // 1. Filter berdasarkan pencarian nama atau barcode
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('nama_item', 'like', '%' . $search . '%')
+                  ->orWhere('barcode', 'like', '%' . $search . '%');
+            });
+        }
+
+        // 2. Filter berdasarkan pemilik toko (Mitra Anda / Kado Koeni)
+        if ($pemilik) {
+            $query->where('pemilik', $pemilik);
+        }
+
+        // Ambil data (paginate 20 item per halaman agar tidak terlalu panjang)
+        $products = $query->latest()->paginate(20)->withQueryString();
+
+        return view('admin.index', compact('products', 'search', 'pemilik'));
     }
 
     // Membuka halaman Formulir Tambah Barang
@@ -31,17 +47,16 @@ class AdminController extends Controller
             'nama_item' => 'required',
             'tipe' => 'required',
             'harga_jual_ecer' => 'required|numeric',
-            'foto_produk' => 'image|mimes:jpeg,png,jpg|max:2048' // Maksimal 2MB
+            'foto_produk' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
         $data = $request->all();
+        $data['stok'] = $data['stok'] ?? 0; // Pengaman jika tipe Jasa dan stok dikosongkan
+        $data['harga_modal'] = $data['harga_modal'] ?? 0;
 
         // MESIN PEMBUAT BARCODE CERDAS (3 Huruf Nama + Strip + 5 Angka)
         if (empty($data['barcode'])) {
-            // Ambil 3 huruf pertama dari nama barang, hapus spasi berlebih, dan jadikan Huruf Kapital
             $tigaHuruf = strtoupper(substr(trim($data['nama_item']), 0, 3));
-            
-            // Gabungkan 3 huruf tersebut dengan strip dan 5 angka acak (contoh: PUL-83921)
             $data['barcode'] = $tigaHuruf . '-' . rand(10000, 99999);
         }
 
@@ -56,18 +71,9 @@ class AdminController extends Controller
         return redirect('/admin')->with('success', 'Barang baru beserta foto berhasil ditambahkan!');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
     // Membuka halaman Formulir Edit
     public function edit($id)
     {
-        // Cari barang berdasarkan ID
         $product = Product::findOrFail($id); 
         return view('admin.edit', compact('product'));
     }
@@ -79,20 +85,19 @@ class AdminController extends Controller
             'nama_item' => 'required',
             'tipe' => 'required',
             'harga_jual_ecer' => 'required|numeric',
-            'foto_produk' => 'image|mimes:jpeg,png,jpg|max:2048' // Validasi keamanan foto
+            'foto_produk' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
         ]);
 
         $product = Product::findOrFail($id);
         $data = $request->all();
+        $data['stok'] = $data['stok'] ?? 0;
+        $data['harga_modal'] = $data['harga_modal'] ?? 0;
 
         // Jika kasir mengupload foto baru saat mengedit
         if ($request->hasFile('foto_produk')) {
-            // 1. Hapus foto lama dari dalam folder (jika sebelumnya sudah ada foto)
             if ($product->foto_produk) {
                 Storage::disk('public')->delete($product->foto_produk);
             }
-            
-            // 2. Simpan foto yang baru
             $path = $request->file('foto_produk')->store('produk', 'public');
             $data['foto_produk'] = $path;
         }
@@ -102,12 +107,24 @@ class AdminController extends Controller
         return redirect('/admin')->with('success', 'Data barang dan foto berhasil diperbarui!');
     }
 
-    // Menghapus data dari Database
+    // Menghapus data beserta file fotonya dari Database & Folder
     public function destroy($id)
     {
         $product = Product::findOrFail($id);
-        $product->delete(); // Hapus permanen
+        
+        if ($product->foto_produk) {
+            Storage::disk('public')->delete($product->foto_produk);
+        }
+        
+        $product->delete();
 
         return redirect('/admin')->with('success', 'Barang berhasil dihapus dari gudang!');
+    }
+
+    // Halaman Katalog Publik (Pintu Depan)
+    public function catalog()
+    {
+        $products = Product::latest()->get();
+        return view('welcome', compact('products'));
     }
 }

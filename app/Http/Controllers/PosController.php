@@ -8,15 +8,18 @@ use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\Expense;
 use App\Models\DailyCashflow;
+use App\Models\User;
 
 class PosController extends Controller
 {
-    public function index()
+    // Tampilkan Halaman Kasir (Membawa data daftar Mitra Instansi untuk Bon Manual Kasir)
+    public function kasir()
     {
-        return view('kasir');
+        $instansis = User::where('role', 'instansi')->orderBy('name', 'asc')->get();
+        return view('kasir', compact('instansis'));
     }
 
-    // Fungsi API baru untuk mencari barang
+    // Fungsi API Live Search untuk mencari Barang & Jasa di Kasir
     public function search(Request $request)
     {
         $keyword = $request->query('q');
@@ -25,22 +28,21 @@ class PosController extends Controller
             return response()->json([]);
         }
 
-        // 1. Cek dulu apakah kasir menembak Barcode yang persis sama
         $exactBarcode = Product::where('barcode', $keyword)->first();
         if ($exactBarcode) {
             return response()->json([$exactBarcode]);
         }
 
-        // 2. Jika bukan barcode persis, cari semua nama barang / barcode yang mirip (maksimal 10 hasil)
         $products = Product::where('nama_item', 'like', '%' . $keyword . '%')
                     ->orWhere('barcode', 'like', '%' . $keyword . '%')
+                    ->orderBy('stok', 'desc')
                     ->limit(10)
                     ->get();
 
         return response()->json($products);
     }
 
-    // Fungsi cetak struk + simpan riwayat transaksi + potong stok
+    // Fungsi cetak struk + simpan riwayat transaksi + potong stok + dukung Bon Kasir Manual
     public function cetak(Request $request)
     {
         $cartData = json_decode($request->cart_data, true);
@@ -48,14 +50,18 @@ class PosController extends Controller
         $uangTunai = $request->uang_tunai;
         $kembalian = $request->kembalian;
         $metodePembayaran = $request->metode_pembayaran ?? 'Tunai';
+        $instansiId = $request->instansi_id ?: null;
 
-        // Buat ID Transaksi berurutan (#4801, #4802, dst) dan anti-kembar
+        $statusPembayaran = ($metodePembayaran === 'Bon / Tempo') ? 'Belum Lunas' : 'Lunas';
+
         $nextId = (Transaction::max('id') ?? 0) + 1;
         $kodeNota = '#' . (4800 + $nextId);
 
         $trx = Transaction::create([
             'kode_nota' => $kodeNota,
+            'instansi_id' => $instansiId,
             'metode_pembayaran' => $metodePembayaran,
+            'status_pembayaran' => $statusPembayaran,
             'total_bayar' => $totalBayar,
             'uang_tunai' => $uangTunai,
             'kembalian' => $kembalian,
@@ -83,36 +89,34 @@ class PosController extends Controller
             }
         }
         
-        return view('struk', compact('cartData', 'totalBayar', 'uangTunai', 'kembalian', 'kodeNota', 'metodePembayaran'));
+        return view('struk', compact('cartData', 'totalBayar', 'uangTunai', 'kembalian', 'kodeNota', 'metodePembayaran', 'statusPembayaran'));
     }
 
-    // Halaman Laporan Cashflow Persis Format Excel (Murni Laci Tunai + Info Non-Tunai)
+    // Halaman Laporan Cashflow
     public function laporan(Request $request)
     {
         $tanggal = $request->query('tanggal', date('Y-m-d'));
 
-        // 1. Ambil Semua Detail Transaksi pada tanggal tersebut
         $details = TransactionDetail::with('transaction')
+                    ->whereHas('transaction', function($q) {
+                        $q->where('metode_pembayaran', '!=', 'Bon / Tempo');
+                    })
                     ->whereDate('created_at', $tanggal)
                     ->latest()
                     ->get();
 
-        // 2. Filter HANYA transaksi TUNAI untuk dihitung ke Cashflow Laci
         $detailsTunai = $details->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
         $pemasukanKado = $detailsTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
         $pemasukanMitra = $detailsTunai->where('pemilik', 'Mitra Anda')->sum('subtotal');
 
-        // 2B. Hitung Info Tambahan untuk yang masuk via QRIS / Transfer (Rekening Masing-Masing)
         $detailsNonTunai = $details->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') !== 'Tunai');
         $nonTunaiKado = $detailsNonTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
         $nonTunaiMitra = $detailsNonTunai->where('pemilik', 'Mitra Anda')->sum('subtotal');
 
-        // 3. Ambil Pengeluaran pada tanggal tersebut
         $expenses = Expense::whereDate('tanggal', $tanggal)->get();
         $pengeluaranKado = $expenses->where('pemilik', 'Kado Koeni')->sum('nominal');
         $pengeluaranMitra = $expenses->where('pemilik', 'Mitra Anda')->sum('nominal');
 
-        // 4. Cek Data Cashflow Hari Ini (Jika belum ada, tarik Sisa Modal Tunai dari Hari Sebelumnya!)
         $cashflow = DailyCashflow::where('tanggal', $tanggal)->first();
 
         if (!$cashflow) {
@@ -145,7 +149,6 @@ class PosController extends Controller
             ]);
         }
 
-        // 5. Rumus Perhitungan Tabel Bawah (Murni Uang Tunai di Laci)
         $totalKado = $cashflow->modal_awal_kado + $pemasukanKado - $pengeluaranKado;
         $totalMitra = $cashflow->modal_awal_mitra + $pemasukanMitra - $pengeluaranMitra;
         $grandTotal = $totalKado + $totalMitra;
@@ -164,7 +167,6 @@ class PosController extends Controller
         ));
     }
 
-    // Simpan Perubahan Modal Awal & Hasil yang Diambil
     public function simpanCashflow(Request $request)
     {
         $cashflow = DailyCashflow::where('tanggal', $request->tanggal)->firstOrFail();
@@ -178,7 +180,6 @@ class PosController extends Controller
         return back()->with('success', 'Perhitungan Bagi Hasil & Sisa Modal berhasil disimpan!');
     }
 
-    // Tambah Pengeluaran Harian (Misal: Laundry)
     public function tambahPengeluaran(Request $request)
     {
         Expense::create([
@@ -190,19 +191,16 @@ class PosController extends Controller
         return back()->with('success', 'Catatan pengeluaran berhasil ditambahkan!');
     }
 
-    // Hapus Pengeluaran
     public function hapusPengeluaran($id)
     {
         Expense::findOrFail($id)->delete();
         return back()->with('success', 'Pengeluaran dihapus!');
     }
 
-    // Hapus Item Transaksi (Void) & Kembalikan Stok ke Gudang Otomatis
     public function hapusDetailTransaksi($id)
     {
         $detail = TransactionDetail::findOrFail($id);
 
-        // 1. Kembalikan stok barang ke gudang jika tipenya 'Barang'
         if ($detail->product_id) {
             $product = Product::find($detail->product_id);
             if ($product && $product->tipe == 'Barang') {
@@ -211,17 +209,14 @@ class PosController extends Controller
             }
         }
 
-        // 2. Perbarui atau hapus Nota Utama (Transaction)
         $trx = Transaction::find($detail->transaction_id);
-        $detail->delete(); // Hapus rincian barang
+        $detail->delete();
 
         if ($trx) {
-            // Cek apakah masih ada barang lain di nota yang sama
             $sisaBarang = TransactionDetail::where('transaction_id', $trx->id)->count();
             if ($sisaBarang == 0) {
-                $trx->delete(); // Jika nota sudah kosong, hapus notanya sekalian
+                $trx->delete();
             } else {
-                // Jika masih ada barang lain, kurangi total_bayar di nota utama
                 $trx->total_bayar = TransactionDetail::where('transaction_id', $trx->id)->sum('subtotal');
                 $trx->save();
             }
@@ -230,7 +225,6 @@ class PosController extends Controller
         return back()->with('success', 'Item transaksi berhasil dibatalkan & stok gudang telah dikembalikan!');
     }
 
-    // Export Laporan Cashflow Harian ke File Excel (.xls) Persis Format Asli
     public function exportExcel(Request $request)
     {
         $tanggal = $request->query('tanggal', date('Y-m-d'));
