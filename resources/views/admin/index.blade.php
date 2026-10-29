@@ -1,175 +1,160 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gudang Admin - Mitra Anda Seponti</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen p-6">
+@extends('layouts.app')
 
-    <div class="max-w-7xl mx-auto space-y-6">
+@section('title', 'Ringkasan')
 
-        <!-- Header Ruang Admin & Tombol Navigasi Lengkap -->
-        <div class="bg-slate-900 text-white p-4 rounded-xl shadow flex flex-wrap justify-between items-center gap-4">
-            <div>
-                <h1 class="text-xl font-black text-amber-400">Ruang Admin / Gudang</h1>
-                <p class="text-xs text-slate-400">Kelola stok, harga, dan pemilik barang toko</p>
-            </div>
-            
-            <div class="flex flex-wrap gap-2">
-                <a href="/kasir" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-4 py-2 rounded text-sm transition">Ke Kasir</a>
-                <a href="/admin/instansi" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 py-2 rounded text-sm transition">🏢 Mitra Instansi</a>
-                <a href="/laporan" class="bg-teal-600 hover:bg-teal-500 text-white font-bold px-4 py-2 rounded text-sm transition">Laporan Cashflow</a>
-                <a href="/" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded text-sm transition">Ke Toko Online</a>
-                <!-- Tombol Logout -->
-                <form action="/logout" method="POST" class="inline">
-                    @csrf
-                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-2 rounded text-sm transition">Keluar</button>
-                </form>
-            </div>
+@section('content')
+<style>
+    .metrik-utama { display: flex; align-items: baseline; gap: 64px; margin-bottom: 64px; }
+    .hero-kiri { flex-shrink: 0; }
+    .hero-angka { font-size: 72px; margin: 8px 0; line-height: 1; }
+    .hero-kanan { display: flex; gap: 40px; border-left: 1px solid var(--garis); padding-left: 64px; flex: 1; }
+    .metrik-item { flex: 1; }
+    .metrik-angka { font-size: 28px; margin: 4px 0; }
+
+    .seksi-pemisah { border-top: 1px solid var(--garis); padding-top: 48px; margin-top: 48px; }
+    .header-seksi { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 24px; }
+    .opsi-grafik { border: none; background: none; color: var(--teks-redup); cursor: pointer; padding-bottom: 2px; font-size: 13px; margin-left: 16px; }
+    .opsi-grafik.aktif { color: var(--teks); font-weight: 500; border-bottom: 1px solid var(--teks); }
+
+    .grid-asimetris { display: grid; grid-template-columns: 2fr 1fr; gap: 64px; }
+    .bar-stok { height: 3px; background-color: var(--permukaan); width: 100%; margin-top: 8px; }
+    .bar-stok-isi { height: 100%; background-color: var(--teks); }
+    
+    .list-terlaris { list-style: none; margin-top: 24px; }
+    .item-terlaris { display: flex; align-items: baseline; border-bottom: 1px solid var(--garis); padding: 12px 0; }
+    .nomor-urut { font-family: var(--font-judul); font-size: 20px; color: var(--teks-redup); width: 32px; flex-shrink: 0; }
+</style>
+
+<div class="header-halaman">
+    <div>
+        <h1>Ringkasan</h1>
+        <p class="teks-redup" id="tanggal-hari-ini">Memuat tanggal...</p>
+    </div>
+    <a href="/kasir" class="btn-utama">Buka Kasir</a>
+</div>
+
+<!-- Angka Utama -->
+<div class="metrik-utama">
+    <div class="hero-kiri">
+        <div class="teks-kecil teks-redup">Pendapatan hari ini</div>
+        <div class="hero-angka angka font-judul">Rp {{ number_format($pendapatanHariIni ?? 0, 0, ',', '.') }}</div>
+        <div class="teks-kecil teks-redup">naik 12% dari kemarin</div>
+    </div>
+    <div class="hero-kanan">
+        <div class="metrik-item">
+            <div class="teks-kecil teks-redup">Perlu diproses</div>
+            <div class="metrik-angka angka font-judul">{{ $totalPerluDiproses ?? 0 }}</div>
+            <div class="teks-kecil teks-redup">pesanan B2B</div>
         </div>
-
-        @if(session('success'))
-            <div class="bg-emerald-100 border-l-4 border-emerald-600 text-emerald-800 p-3 rounded font-bold text-sm">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        <!-- Peringatan Stok Menipis (Opsi 1: Kado Koeni <= 0, Mitra Anda < 5) -->
-        @php
-            $stokTipis = \App\Models\Product::where('tipe', 'Barang')->get()->filter(function($item) {
-                if ($item->pemilik === 'Kado Koeni') {
-                    return $item->stok <= 0;
-                }
-                return $item->stok < 5;
-            });
-        @endphp
-
-        @if($stokTipis->count() > 0)
-        <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg shadow-sm border border-amber-200">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="text-amber-600 font-black text-lg">⚠️</span>
-                <span class="font-bold text-amber-800 text-sm">PERINGATAN: ADA {{ $stokTipis->count() }} BARANG YANG STOKNYA HABIS / MENIPIS!</span>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                @foreach($stokTipis as $st)
-                    <span class="text-xs bg-white border border-amber-300 px-2.5 py-1 rounded-md text-slate-800 font-semibold shadow-xs">
-                        <b>{{ $st->nama_item }}</b> ({{ $st->pemilik }} - Sisa: <span class="text-red-600 font-black">{{ $st->stok }}</span>)
-                    </span>
-                @endforeach
-            </div>
+        <div class="metrik-item">
+            <div class="teks-kecil teks-redup">Stok menipis</div>
+            <div class="metrik-angka angka font-judul">{{ $totalStokMenipis ?? 0 }}</div>
+            <div class="teks-kecil teks-redup">barang</div>
         </div>
-        @endif
-
-        <!-- Bar Kontrol: Tombol Tambah Barang, Kotak Pencarian, & Filter Toko -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap justify-between items-center gap-4">
-            
-            <!-- Tombol Tambah Barang -->
-            <a href="/admin/create" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-2.5 rounded-lg text-sm shadow transition flex items-center gap-1.5">
-                ➕ Tambah Barang Baru
-            </a>
-
-            <!-- Form Pencarian & Filter Toko -->
-            <form action="/admin" method="GET" class="flex flex-wrap items-center gap-2 flex-1 max-w-2xl justify-end">
-                
-                <!-- Filter Pemilik Toko -->
-                <select name="pemilik" onchange="this.form.submit()" class="border border-gray-300 rounded-lg px-3 py-2 text-sm font-bold bg-gray-50 text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none">
-                    <option value="">🏢 Semua Toko</option>
-                    <option value="Mitra Anda" {{ $pemilik == 'Mitra Anda' ? 'selected' : '' }}>Mitra Anda</option>
-                    <option value="Kado Koeni" {{ $pemilik == 'Kado Koeni' ? 'selected' : '' }}>Kado Koeni</option>
-                </select>
-
-                <!-- Input Kata Kunci Pencarian -->
-                <div class="relative flex-1 min-w-[200px]">
-                    <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Cari nama barang atau barcode..." class="w-full border border-gray-300 rounded-lg pl-3 pr-10 py-2 text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none">
-                    @if($search)
-                        <a href="/admin" class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 font-bold text-xs bg-gray-200 px-1.5 py-0.5 rounded-full" title="Reset Pencarian">✕</a>
-                    @endif
-                </div>
-
-                <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition">
-                    Cari
-                </button>
-            </form>
-
+        <div class="metrik-item">
+            <div class="teks-kecil teks-redup">Piutang berjalan</div>
+            <div class="metrik-angka angka font-judul">Rp {{ number_format($totalPiutang ?? 0, 0, ',', '.') }}</div>
+            <div class="teks-kecil teks-redup">dari instansi</div>
         </div>
+    </div>
+</div>
 
-        <!-- Tabel Daftar Barang -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <table class="w-full text-left border-collapse text-sm">
-                <thead>
-                    <tr class="bg-slate-100 text-slate-700 font-bold border-b border-gray-200">
-                        <th class="p-4 w-36">Barcode</th>
-                        <th class="p-4 w-20 text-center">Foto</th>
-                        <th class="p-4">Nama Item & Toko</th>
-                        <th class="p-4">Tipe / Kategori</th>
-                        <th class="p-4 text-right">Modal</th>
-                        <th class="p-4 text-right">Jual Ecer</th>
-                        <th class="p-4 text-center w-28">Stok</th>
-                        <th class="p-4 text-center w-28">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($products as $item)
-                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition">
-                        <td class="p-4 font-mono text-xs text-gray-500">{{ $item->barcode ?? '-' }}</td>
-                        <td class="p-4 text-center">
-                            @if($item->foto_produk)
-                                <img src="{{ asset('storage/' . $item->foto_produk) }}" class="w-10 h-10 object-cover rounded mx-auto border shadow-xs">
-                            @else
-                                <span class="text-xs text-gray-400 italic">Kosong</span>
-                            @endif
-                        </td>
-                        <td class="p-4 font-bold text-slate-800">
-                            {{ $item->nama_item }}
-                            <span class="block text-[10px] font-extrabold uppercase mt-1 px-2 py-0.5 rounded w-max {{ $item->pemilik == 'Kado Koeni' ? 'bg-pink-100 text-pink-700' : 'bg-blue-100 text-blue-700' }}">
-                                {{ $item->pemilik ?? 'Mitra Anda' }}
-                            </span>
-                        </td>
-                        <td class="p-4">
-                            <span class="px-2 py-1 rounded text-xs font-bold {{ $item->tipe == 'Jasa' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700' }}">
-                                {{ $item->tipe }}
-                            </span>
-                            <span class="block text-xs text-gray-400 mt-1">{{ $item->kategori ?? '-' }}</span>
-                        </td>
-                        <td class="p-4 text-right font-medium text-gray-600">Rp{{ number_format($item->harga_modal, 0, ',', '.') }}</td>
-                        <td class="p-4 text-right font-bold text-blue-600">Rp{{ number_format($item->harga_jual_ecer, 0, ',', '.') }}</td>
-                        <td class="p-4 text-center font-bold">
-                            @if($item->tipe == 'Barang')
-                                <span class="{{ $item->stok <= 0 ? 'text-red-600 bg-red-50 px-2 py-1 rounded' : 'text-slate-800' }}">
-                                    {{ $item->stok }} {{ $item->satuan ?? 'pcs' }}
-                                </span>
-                            @else
-                                <span class="text-purple-600 italic text-xs">Tak Terbatas</span>
-                            @endif
-                        </td>
-                        <td class="p-4 text-center">
-                            <div class="flex justify-center gap-1.5">
-                                <a href="/admin/{{ $item->id }}/edit" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold px-2.5 py-1 rounded text-xs shadow-xs transition">Edit</a>
-                                <form action="/admin/{{ $item->id }}" method="POST" onsubmit="return confirm('Hapus barang {{ addslashes($item->nama_item) }}?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold px-2.5 py-1 rounded text-xs shadow-xs transition">Hapus</button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="8" class="p-8 text-center text-gray-400">Tidak ada barang yang ditemukan.</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+<!-- Grafik Penjualan (SVG Inline Murni) -->
+<div class="seksi-pemisah">
+    <div class="header-seksi">
+        <h2 style="font-size: 24px;">Penjualan</h2>
+        <div>
+            <button class="opsi-grafik aktif">7H</button>
+            <button class="opsi-grafik">30H</button>
+            <button class="opsi-grafik">90H</button>
         </div>
+    </div>
+    <svg viewBox="0 0 1000 180" style="width: 100%; height: 180px; overflow: visible;">
+        <!-- Gridlines putus-putus -->
+        <line x1="0" y1="20" x2="1000" y2="20" stroke="var(--garis)" stroke-width="1" stroke-dasharray="4 4" />
+        <line x1="0" y1="90" x2="1000" y2="90" stroke="var(--garis)" stroke-width="1" stroke-dasharray="4 4" />
+        <line x1="0" y1="160" x2="1000" y2="160" stroke="var(--garis)" stroke-width="1" />
+        
+        <!-- Garis Data 1.5px -->
+        <path d="M 0 120 L 160 140 L 330 80 L 500 110 L 660 40 L 830 70 L 1000 30" 
+              fill="none" stroke="var(--teks)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              
+        <!-- Anotasi Puncak & Terakhir -->
+        <circle cx="660" cy="40" r="3.5" fill="var(--teks)" />
+        <text x="660" y="24" font-family="var(--font-isi)" font-size="12" fill="var(--teks-redup)" text-anchor="middle" class="angka">Puncak (Kamis)</text>
+        
+        <circle cx="1000" cy="30" r="3.5" fill="var(--teks)" />
+        <text x="1000" y="14" font-family="var(--font-isi)" font-size="12" fill="var(--teks)" text-anchor="end" class="angka">Hari ini</text>
+    </svg>
+</div>
 
-        <!-- Navigasi Halaman (Pagination) -->
-        <div class="mt-4">
-            {{ $products->links() }}
+<!-- Kolom 2:1 -->
+<div class="seksi-pemisah grid-asimetris">
+    <!-- Tabel Pesanan -->
+    <div>
+        <div class="header-seksi" style="margin-bottom: 16px;">
+            <h2 style="font-size: 20px;">Pesanan yang perlu diproses</h2>
         </div>
-
+        <table class="tabel-data">
+            <thead>
+                <tr>
+                    <th>Nota</th>
+                    <th>Instansi</th>
+                    <th>Status</th>
+                    <th class="rata-kanan">Nilai</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($pesananPerluDiproses ?? [] as $pesanan)
+                <tr>
+                    <td class="angka">{{ $pesanan->kode_nota }}</td>
+                    <td>{{ $pesanan->instansi->name ?? 'Umum' }}</td>
+                    <td>
+                        <span class="status-grup status-proses"><span class="status-dot"></span>Perlu diproses</span>
+                    </td>
+                    <td class="rata-kanan angka">Rp {{ number_format($pesanan->total_bayar, 0, ',', '.') }}</td>
+                </tr>
+                @empty
+                <tr><td colspan="4"><div class="state-kosong">Tidak ada pesanan yang perlu diproses hari ini.</div></td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
-</body>
-</html>
+    <!-- Stok & Terlaris -->
+    <div>
+        <div class="header-seksi" style="margin-bottom: 16px;">
+            <h2 style="font-size: 20px;">Stok menipis</h2>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            @forelse($stokMenipis ?? [] as $stok)
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 4px;">
+                    <span>{{ $stok->nama_item }}</span>
+                    <span class="angka teks-redup">{{ $stok->stok }} {{ $stok->satuan }}</span>
+                </div>
+                <div class="bar-stok">
+                    <!-- Panjang bar proporsional (maks 10) -->
+                    <div class="bar-stok-isi" style="width: {{ min(100, ($stok->stok / 10) * 100) }}%;"></div>
+                </div>
+            </div>
+            @empty
+            <div class="state-kosong" style="padding: 16px 0;">Semua stok dalam batas aman.</div>
+            @endforelse
+        </div>
+
+        <h3 style="font-size: 17px; margin-top: 64px; border-top: 1px solid var(--garis); padding-top: 24px;">Terlaris minggu ini</h3>
+        <ul class="list-terlaris">
+            @forelse($produkTerlaris ?? [] as $index => $laris)
+            <li class="item-terlaris">
+                <span class="nomor-urut">{{ $index + 1 }}</span>
+                <span style="flex: 1; font-size: 15px;">{{ $laris->nama_item }}</span>
+                <span class="angka rata-kanan" style="font-size: 15px;">{{ $laris->total_terjual ?? 0 }}</span>
+            </li>
+            @empty
+            <li class="teks-kecil teks-redup" style="padding: 16px 0;">Belum ada data penjualan minggu ini.</li>
+            @endforelse
+        </ul>
+    </div>
+</div>
+@endsection

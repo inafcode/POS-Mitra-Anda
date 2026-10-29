@@ -1,104 +1,90 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tambah Barang - Mitra Anda Seponti</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 min-h-screen p-8">
+@extends('layouts.app')
 
-    <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-sm border border-gray-200">
-        <div class="flex justify-between items-center mb-6 border-b pb-4">
-            <h2 class="text-2xl font-bold text-gray-800">Formulir Tambah Barang/Jasa</h2>
-            <a href="/admin" class="text-gray-500 hover:text-gray-700 font-medium">Batal & Kembali</a>
-        </div>
+@section('title', 'Tambah Barang')
 
-        <!-- Form mengarah ke rute /admin dengan metode POST -->
-        <form action="/admin" method="POST" enctype="multipart/form-data">
-            @csrf <!-- Wajib ada di Laravel sebagai sistem keamanan -->
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Upload Foto -->
-             <div class="md:col-span-2 mb-2 p-4 bg-blue-50 border border-blue-100 rounded-lg">
-                 <label class="block text-sm font-bold text-blue-800 mb-2">Foto Produk (Opsional)</label>
-                 <input type="file" name="foto_produk" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700">
-             </div>
-                <!-- Barcode -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kode Barcode (Opsional)</label>
-                    <input type="text" name="barcode" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
+@section('content')
+<style>
+    .form-wadah { max-width: 800px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    .form-baris-penuh { grid-column: 1 / -1; }
+    .grup-input label { display: block; font-size: 13px; color: var(--teks-redup); margin-bottom: 6px; }
+    .grup-input input[type="text"], .grup-input input[type="number"], .grup-input select {
+        width: 100%; background: transparent; border: 1px solid var(--garis); border-radius: 4px; padding: 10px 12px; font-family: inherit; font-size: 15px; color: var(--teks); box-sizing: border-box;
+    }
+    .grup-input input:focus, .grup-input select:focus { outline: 2px solid var(--teks); outline-offset: 1px; background: #FDFBF7; }
+    .input-berkas { font-size: 13px; color: var(--teks-redup); }
+</style>
 
-                <!-- Nama Item -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Barang / Jasa <span class="text-red-500">*</span></label>
-                    <input type="text" name="nama_item" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-
-                <!-- Tipe Item -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Item <span class="text-red-500">*</span></label>
-                    <select name="tipe" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="Barang">Fisik (Barang)</option>
-                        <option value="Jasa">Non-Fisik (Jasa)</option>
-                    </select>
-                </div>
-
-                <div>
-                 <label class="block text-sm font-medium text-gray-700 mb-1">Milik Toko <span class="text-red-500">*</span></label>
-                 <select name="pemilik" class="w-full border border-gray-300 rounded-md p-2 bg-yellow-50 font-bold text-slate-800">
-                     <option value="Mitra Anda">🏢 Mitra Anda</option>
-                     <option value="Kado Koeni">🎁 Kado Koeni</option>
-                 </select>
-             </div>
-
-                <!-- Kategori & Satuan -->
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-                        <input type="text" name="kategori" placeholder="Cth: Alat Tulis" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
-                        <input type="text" name="satuan" placeholder="Cth: Pcs, Lembar" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                </div>
-
-                <!-- Harga Modal & Jual Ecer -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Harga Modal (HPP)</label>
-                    <input type="number" name="harga_modal" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-red-50 text-red-700 font-bold">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Harga Jual Eceran <span class="text-red-500">*</span></label>
-                    <input type="number" name="harga_jual_ecer" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50 text-blue-700 font-bold">
-                </div>
-
-                <!-- Harga Grosir & Syarat Grosir -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Harga Jual Grosir (Opsional)</label>
-                    <input type="number" name="harga_jual_grosir" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Min. Beli Grosir (Syarat)</label>
-                    <input type="number" name="syarat_grosir" placeholder="Cth: 12" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none">
-                </div>
-
-                <!-- Stok -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Stok Awal</label>
-                    <input type="number" name="stok" class="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-blue-500 outline-none font-bold">
-                </div>
-            </div>
-
-            <div class="mt-8 pt-4 border-t text-right">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-md shadow-lg transition">
-                    Simpan Barang ke Gudang
-                </button>
-            </div>
-        </form>
+<div class="header-halaman">
+    <div>
+        <h1>Tambah Barang</h1>
+        <p class="teks-redup teks-kecil">Pencatatan barang fisik atau jasa baru ke dalam katalog toko</p>
     </div>
+    <a href="/admin/produk" class="btn-sekunder">Batal & Kembali</a>
+</div>
 
-</body>
-</html>
+<div class="form-wadah">
+    <form action="/admin" method="POST" enctype="multipart/form-data">
+        @csrf
+        <div class="form-grid">
+            <div class="grup-input form-baris-penuh">
+                <label for="foto_produk">Foto Produk (Opsional)</label>
+                <input type="file" id="foto_produk" name="foto_produk" accept="image/*" class="input-berkas">
+            </div>
+            <div class="grup-input">
+                <label for="barcode">Kode Barcode (Opsional)</label>
+                <input type="text" id="barcode" name="barcode" placeholder="Scan atau ketik barcode" value="{{ old('barcode') }}">
+            </div>
+            <div class="grup-input">
+                <label for="nama_item">Nama Barang / Jasa *</label>
+                <input type="text" id="nama_item" name="nama_item" required placeholder="Contoh: Kertas A4 70gr" value="{{ old('nama_item') }}">
+            </div>
+            <div class="grup-input">
+                <label for="tipe">Tipe Item *</label>
+                <select id="tipe" name="tipe">
+                    <option value="Barang">Fisik (Barang)</option>
+                    <option value="Jasa">Non-Fisik (Jasa)</option>
+                </select>
+            </div>
+            <div class="grup-input">
+                <label for="pemilik">Milik Toko *</label>
+                <select id="pemilik" name="pemilik">
+                    <option value="Mitra Anda">Mitra Anda</option>
+                    <option value="Kado Koeni">Kado Koeni</option>
+                </select>
+            </div>
+            <div class="grup-input">
+                <label for="kategori">Kategori</label>
+                <input type="text" id="kategori" name="kategori" placeholder="Contoh: ATK" value="{{ old('kategori') }}">
+            </div>
+            <div class="grup-input">
+                <label for="satuan">Satuan</label>
+                <input type="text" id="satuan" name="satuan" placeholder="Contoh: Rim, Pcs" value="{{ old('satuan') }}">
+            </div>
+            <div class="grup-input">
+                <label for="harga_modal">Harga Modal (HPP)</label>
+                <input type="number" id="harga_modal" name="harga_modal" placeholder="0" class="angka" value="{{ old('harga_modal') }}">
+            </div>
+            <div class="grup-input">
+                <label for="harga_jual_ecer">Harga Jual Eceran *</label>
+                <input type="number" id="harga_jual_ecer" name="harga_jual_ecer" required placeholder="0" class="angka" value="{{ old('harga_jual_ecer') }}">
+            </div>
+            <div class="grup-input">
+                <label for="harga_jual_grosir">Harga Jual Grosir</label>
+                <input type="number" id="harga_jual_grosir" name="harga_jual_grosir" placeholder="0" class="angka" value="{{ old('harga_jual_grosir') }}">
+            </div>
+            <div class="grup-input">
+                <label for="syarat_grosir">Min. Beli Grosir (Syarat)</label>
+                <input type="number" id="syarat_grosir" name="syarat_grosir" placeholder="Contoh: 10" class="angka" value="{{ old('syarat_grosir') }}">
+            </div>
+            <div class="grup-input form-baris-penuh">
+                <label for="stok">Stok Awal</label>
+                <input type="number" id="stok" name="stok" placeholder="0" class="angka" value="{{ old('stok', 0) }}">
+            </div>
+        </div>
+        <div style="border-top: 1px solid var(--garis); padding-top: 24px; text-align: right;">
+            <button type="submit" class="btn-utama">Simpan Barang ke Gudang</button>
+        </div>
+    </form>
+</div>
+@endsection

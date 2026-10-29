@@ -12,11 +12,16 @@ use App\Models\User;
 
 class PosController extends Controller
 {
-    // Tampilkan Halaman Kasir (Membawa data daftar Mitra Instansi untuk Bon Manual Kasir)
     public function kasir()
     {
-        $instansis = User::where('role', 'instansi')->orderBy('name', 'asc')->get();
-        return view('kasir', compact('instansis'));
+        $instansis = User::where('role', 'instansi')->get();
+
+        // Ambil semua produk yang stoknya masih tersedia untuk etalase samping
+        $products = Product::where('stok', '>', 0)
+                           ->orderBy('nama_item', 'asc')
+                           ->get();
+
+        return view('kasir', compact('instansis', 'products'));
     }
 
     // Fungsi API Live Search untuk mencari Barang & Jasa di Kasir

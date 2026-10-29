@@ -28,8 +28,11 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/laporan/detail/{id}', [PosController::class, 'hapusDetailTransaksi']);
     Route::get('/laporan/export', [PosController::class, 'exportExcel']);
 
-    // Halaman Gudang Admin (CRUD Produk)
-    Route::get('/admin', [AdminController::class, 'index']);
+    // Halaman Ringkasan (Dashboard Editorial)
+    Route::get('/admin', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+
+    // Halaman Manajemen Stok/CRUD Barang (Gudang)
+    Route::get('/admin/produk', [AdminController::class, 'index'])->name('admin.produk');
     Route::get('/admin/create', [AdminController::class, 'create']);
     Route::post('/admin', [AdminController::class, 'store']);
     Route::get('/admin/{id}/edit', [AdminController::class, 'edit']);

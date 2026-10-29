@@ -5,9 +5,48 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage; // <--- WAJIB ADA AGAR EDIT/HAPUS FOTO TIDAK ERROR
 use App\Models\Product;
+use App\Models\Transaction;
+use Carbon\Carbon;
 
 class AdminController extends Controller
 {
+    // 1. Halaman Ringkasan (Buku Kas & Metrik Dashboard)
+    public function dashboard()
+    {
+        $hariIni = Carbon::today();
+
+        $pendapatanHariIni = Transaction::whereDate('created_at', $hariIni)
+            ->where('status_pembayaran', 'Lunas')
+            ->sum('total_bayar');
+
+        $pesananPerluDiproses = Transaction::with('instansi')
+            ->whereIn('status_pembayaran', ['Menunggu Pembayaran', 'Belum Lunas'])
+            ->latest()
+            ->take(5)
+            ->get();
+        $totalPerluDiproses = Transaction::whereIn('status_pembayaran', ['Menunggu Pembayaran', 'Belum Lunas'])->count();
+
+        $stokMenipis = Product::where('tipe', 'Barang')
+            ->where('stok', '<', 5)
+            ->orderBy('stok', 'asc')
+            ->take(5)
+            ->get();
+        $totalStokMenipis = Product::where('tipe', 'Barang')->where('stok', '<', 5)->count();
+
+        $totalPiutang = Transaction::where('status_pembayaran', 'Belum Lunas')->sum('total_bayar');
+        $produkTerlaris = Product::orderBy('stok', 'asc')->take(5)->get();
+
+        return view('admin.dashboard', compact(
+            'pendapatanHariIni',
+            'pesananPerluDiproses',
+            'totalPerluDiproses',
+            'stokMenipis',
+            'totalStokMenipis',
+            'totalPiutang',
+            'produkTerlaris'
+        ));
+    }
+
     public function index(Request $request)
     {
         $search = $request->query('search');
