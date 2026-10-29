@@ -190,6 +190,9 @@
                 <li>
                     <a href="/laporan" class="nav-item {{ request()->is('laporan*') ? 'aktif' : '' }}">Buku Kas</a>
                 </li>
+                <li>
+                    <a href="/admin/pesanan" class="nav-item {{ request()->is('admin/pesanan*') ? 'aktif' : '' }}">Pesanan Instansi</a>
+                </li>
             </ul>
             <div class="sidebar-footer">
                 <strong>{{ Auth::user()->name ?? 'Pemilik Toko' }}</strong>

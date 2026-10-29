@@ -191,6 +191,13 @@
                         @if(($d->transaction->metode_pembayaran ?? 'Tunai') !== 'Tunai')
                             <div class="teks-kecil teks-redup">{{ strtoupper($d->transaction->metode_pembayaran) }}</div>
                         @endif
+                        
+                        <!-- TAMBAHAN: Penanda jika barang ini dari transaksi instansi -->
+                        @if(isset($d->dari_instansi) && $d->dari_instansi)
+                            <div class="teks-kecil" style="color: var(--aksen); font-weight: 500; margin-top: 2px;">
+                                Pelunasan Instansi
+                            </div>
+                        @endif
                     </td>
                     <td style="font-weight: 500;">{{ $d->nama_item }}</td>
                     <td>
@@ -252,6 +259,16 @@
                     <td class="rata-kanan">
                         <span class="teks-redup teks-kecil">Rp</span>
                         <input type="number" name="modal_awal_kado" value="{{ $cashflow->modal_awal_kado }}" class="input-angka-tabel angka rata-kanan" style="width: 140px; font-weight: 500;">
+                        
+                        <!-- TAMBAHAN: Teks bantuan/pengingat uang sisa hari sebelumnya -->
+                        @php
+                            $tglKemarin = \Carbon\Carbon::parse($tanggal)->subDay()->toDateString();
+                            $cashflowKemarin = \App\Models\DailyCashflow::where('tanggal', $tglKemarin)->first();
+                            $sisaKemarinKado = $cashflowKemarin ? ($cashflowKemarin->modal_awal_kado + $cashflowKemarin->total_pemasukan_kado - $cashflowKemarin->total_pengeluaran_kado - $cashflowKemarin->hasil_diambil_kado) : 0;
+                        @endphp
+                        <div class="teks-kecil teks-redup" style="margin-top: 6px;">
+                            Tercatat H-1: Rp {{ number_format($sisaKemarinKado, 0, ',', '.') }}
+                        </div>
                     </td>
                     <td class="rata-kanan angka">Rp {{ number_format($pemasukanKado, 0, ',', '.') }}</td>
                     <td class="rata-kanan angka teks-redup">
@@ -268,6 +285,14 @@
                     <td class="rata-kanan">
                         <span class="teks-redup teks-kecil">Rp</span>
                         <input type="number" name="modal_awal_mitra" value="{{ $cashflow->modal_awal_mitra }}" class="input-angka-tabel angka rata-kanan" style="width: 140px; font-weight: 500;">
+                        
+                        <!-- TAMBAHAN: Teks bantuan/pengingat uang sisa hari sebelumnya -->
+                        @php
+                            $sisaKemarinMitra = $cashflowKemarin ? ($cashflowKemarin->modal_awal_mitra + $cashflowKemarin->total_pemasukan_mitra - $cashflowKemarin->total_pengeluaran_mitra - $cashflowKemarin->hasil_diambil_mitra) : 0;
+                        @endphp
+                        <div class="teks-kecil teks-redup" style="margin-top: 6px;">
+                            Tercatat H-1: Rp {{ number_format($sisaKemarinMitra, 0, ',', '.') }}
+                        </div>
                     </td>
                     <td class="rata-kanan angka">Rp {{ number_format($pemasukanMitra, 0, ',', '.') }}</td>
                     <td class="rata-kanan angka teks-redup">

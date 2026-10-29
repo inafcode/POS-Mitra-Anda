@@ -40,8 +40,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('index');
         Route::get('/create', [AdminController::class, 'create'])->name('create');
         Route::post('/', [AdminController::class, 'store'])->name('store');
-
-        // RUTE BARU UNTUK IMPORT EXCEL
+        
+        // Import Excel
         Route::post('/import', [AdminController::class, 'importExcel'])->name('import');
 
         Route::get('/{id}/edit', [AdminController::class, 'edit'])->name('edit');
@@ -95,7 +95,17 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | 6. Portal Mandiri Instansi (B2B Online Bon)
+    | 6. Pesanan Instansi (Verifikasi Pembayaran B2B)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('admin/pesanan')->name('admin.pesanan.')->group(function () {
+        Route::get('/', [PosController::class, 'pesananInstansi'])->name('index');
+        Route::post('/{id}/acc', [PosController::class, 'accPesananInstansi'])->name('acc');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | 7. Portal Mandiri Instansi (B2B Online Checkout)
     |--------------------------------------------------------------------------
     */
     Route::prefix('portal-instansi')->name('portal.')->group(function () {

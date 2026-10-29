@@ -9,6 +9,7 @@ use App\Models\TransactionDetail;
 use App\Models\Expense;
 use App\Models\DailyCashflow;
 use App\Models\User;
+use Carbon\Carbon;
 
 class PosController extends Controller
 {
@@ -57,7 +58,13 @@ class PosController extends Controller
         $metodePembayaran = $request->metode_pembayaran ?? 'Tunai';
         $instansiId = $request->instansi_id ?: null;
 
-        $statusPembayaran = ($metodePembayaran === 'Bon / Tempo') ? 'Belum Lunas' : 'Lunas';
+        // --- BAGIAN YANG DIUBAH (Logika Status Pembayaran) ---
+        if ($instansiId && $metodePembayaran === 'Tunai') {
+            $statusPembayaran = 'Menunggu Pembayaran'; // Menunggu ACC kasir
+        } else {
+            $statusPembayaran = ($metodePembayaran === 'Bon / Tempo') ? 'Belum Lunas' : 'Lunas';
+        }
+        // -----------------------------------------------------
 
         $nextId = (Transaction::max('id') ?? 0) + 1;
         $kodeNota = '#' . (4800 + $nextId);
@@ -89,6 +96,7 @@ class PosController extends Controller
             ]);
 
             if ($product && $product->tipe == 'Barang') {
+                // --- BAGIAN YANG DIPERBAIKI (Tanda kurang menyatu) ---
                 $product->stok = $product->stok - $item['qty'];
                 $product->save();
             }
@@ -97,18 +105,45 @@ class PosController extends Controller
         return view('struk', compact('cartData', 'totalBayar', 'uangTunai', 'kembalian', 'kodeNota', 'metodePembayaran', 'statusPembayaran'));
     }
 
+    // Mengambil data detail transaksi gabungan (Kasir & Pelunasan Instansi)
+    private function getLaporanDetails($tanggal)
+    {
+        // 1. Transaksi reguler & instansi yang lunas di hari yang sama
+        $detailsHariIni = TransactionDetail::with('transaction')
+            ->whereHas('transaction', function($q) {
+                $q->where('metode_pembayaran', '!=', 'Bon / Tempo');
+            })
+            ->whereDate('created_at', $tanggal)
+            ->get();
+
+        // 2. Pelunasan Bon Instansi (Transaksi dibuat di masa lalu, tapi dilunasi HARI INI secara Tunai)
+        $pelunasanInstansi = TransactionDetail::with('transaction')
+            ->whereHas('transaction', function($q) use ($tanggal) {
+                $q->whereNotNull('instansi_id')
+                  ->where('status_pembayaran', 'Lunas')
+                  ->where('metode_pembayaran', 'Tunai') // Masuk ke laci jika lunas tunai
+                  ->whereDate('updated_at', $tanggal)
+                  ->whereDate('created_at', '!=', $tanggal); // Hindari duplikasi
+            })
+            ->get();
+
+        // Tandai pelunasan instansi dan sesuaikan waktu laporannya menjadi waktu pelunasan (updated_at)
+        foreach ($pelunasanInstansi as $detail) {
+            $detail->dari_instansi = true;
+            $detail->created_at = $detail->transaction->updated_at;
+        }
+
+        // Gabungkan dan urutkan dari yang terbaru
+        return $detailsHariIni->concat($pelunasanInstansi)->sortByDesc('created_at')->values();
+    }
+
     // Halaman Laporan Cashflow
     public function laporan(Request $request)
     {
         $tanggal = $request->query('tanggal', date('Y-m-d'));
 
-        $details = TransactionDetail::with('transaction')
-                    ->whereHas('transaction', function($q) {
-                        $q->where('metode_pembayaran', '!=', 'Bon / Tempo');
-                    })
-                    ->whereDate('created_at', $tanggal)
-                    ->latest()
-                    ->get();
+        // Gunakan fungsi private untuk mengambil data gabungan
+        $details = $this->getLaporanDetails($tanggal);
 
         $detailsTunai = $details->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
         $pemasukanKado = $detailsTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
@@ -128,10 +163,8 @@ class PosController extends Controller
             $kemarin = DailyCashflow::where('tanggal', '<', $tanggal)->orderBy('tanggal', 'desc')->first();
 
             if ($kemarin) {
-                $detailsKemarinTunai = TransactionDetail::with('transaction')
-                    ->whereDate('created_at', $kemarin->tanggal)
-                    ->get()
-                    ->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
+                $detailsKemarinTunai = $this->getLaporanDetails($kemarin->tanggal)
+                                            ->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
 
                 $masukKadoKemarin = $detailsKemarinTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
                 $keluarKadoKemarin = Expense::whereDate('tanggal', $kemarin->tanggal)->where('pemilik', 'Kado Koeni')->sum('nominal');
@@ -234,10 +267,8 @@ class PosController extends Controller
     {
         $tanggal = $request->query('tanggal', date('Y-m-d'));
 
-        $details = TransactionDetail::with('transaction')
-                    ->whereDate('created_at', $tanggal)
-                    ->latest()
-                    ->get();
+        // Gunakan fungsi private agar perhitungan Excel sama persis dengan UI
+        $details = $this->getLaporanDetails($tanggal);
 
         $detailsTunai = $details->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
         $pemasukanKado = $detailsTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
@@ -273,5 +304,30 @@ class PosController extends Controller
             'sisaModalKado', 'sisaModalMitra', 'totalSisaModal'
         ))->header('Content-Type', 'application/vnd.ms-excel')
           ->header('Content-Disposition', 'attachment; filename="' . $namaFile . '"');
+    }
+
+    // Menampilkan halaman daftar pesanan instansi yang belum lunas
+    public function pesananInstansi()
+    {
+        // Ambil transaksi instansi yang statusnya butuh ACC (Belum Lunas / Menunggu Pembayaran)
+        $pesanan = Transaction::with(['details']) 
+                    ->whereNotNull('instansi_id')
+                    ->whereIn('status_pembayaran', ['Belum Lunas', 'Menunggu Pembayaran'])
+                    ->latest()
+                    ->get();
+
+        return view('admin.pesanan', compact('pesanan'));
+    }
+
+    // Memproses ACC pembayaran tunai/transfer menjadi Lunas
+    public function accPesananInstansi($id)
+    {
+        $transaksi = Transaction::findOrFail($id);
+        
+        $transaksi->update([
+            'status_pembayaran' => 'Lunas'
+        ]);
+
+        return back()->with('success', 'Pesanan ' . $transaksi->kode_nota . ' berhasil di-ACC. Dana telah diteruskan ke kalkulasi Buku Kas.');
     }
 }
