@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Storage; // <--- WAJIB ADA AGAR EDIT/HAPUS FOTO T
 use App\Models\Product;
 use App\Models\Transaction;
 use Carbon\Carbon;
+use App\Imports\ProductsImport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AdminController extends Controller
 {
@@ -67,7 +69,7 @@ class AdminController extends Controller
             });
         }
 
-        $products = $query->latest()->paginate(15)->withQueryString();
+        $products = $query->latest()->get();
 
         // PASTIKAN BARIS INI: me-return view 'admin.produk', BUKAN 'admin.index' atau 'admin.dashboard'
         return view('admin.produk', compact('products', 'pemilik', 'search'));
@@ -181,7 +183,7 @@ class AdminController extends Controller
         
         $product->delete();
 
-        return redirect('/admin')->with('success', 'Barang berhasil dihapus dari gudang!');
+        return redirect('/admin/produk')->with('success', 'Barang berhasil dihapus dari gudang!');
     }
 
     // Halaman Katalog Publik (Pintu Depan)
@@ -189,5 +191,16 @@ class AdminController extends Controller
     {
         $products = Product::latest()->get();
         return view('welcome', compact('products'));
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file_excel' => 'required|mimes:xlsx,xls'
+        ]);
+
+        Excel::import(new ProductsImport, $request->file('file_excel'));
+
+        return redirect('/admin/produk')->with('success', 'Ratusan data barang berhasil diimpor dari file Excel!');
     }
 }

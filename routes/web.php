@@ -40,6 +40,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('index');
         Route::get('/create', [AdminController::class, 'create'])->name('create');
         Route::post('/', [AdminController::class, 'store'])->name('store');
+
+        // RUTE BARU UNTUK IMPORT EXCEL
+        Route::post('/import', [AdminController::class, 'importExcel'])->name('import');
+
         Route::get('/{id}/edit', [AdminController::class, 'edit'])->name('edit');
         Route::put('/{id}', [AdminController::class, 'update'])->name('update');
         Route::delete('/{id}', [AdminController::class, 'destroy'])->name('destroy');

@@ -81,6 +81,81 @@
         padding-top: 24px;
         border-top: 1px solid var(--garis);
     }
+
+    /* 1. Menjinakkan ukuran raksasa SVG bawaan Laravel */
+    .paginasi-wadah svg {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+    }
+
+    /* 2. Merapikan tata letak teks dan angka paginasi */
+    .paginasi-wadah nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        font-size: 13px;
+        color: var(--teks-redup);
+    }
+
+    .paginasi-wadah nav p {
+        margin: 0;
+    }
+
+    /* 3. Gaya untuk tautan angka dan panah */
+    .paginasi-wadah a, 
+    .paginasi-wadah span[aria-disabled="true"] {
+        padding: 4px 8px;
+        color: var(--teks-redup);
+        text-decoration: none;
+    }
+
+    .paginasi-wadah a:hover {
+        color: var(--teks);
+    }
+
+    /* 4. Menandai halaman yang sedang aktif */
+    .paginasi-wadah span[aria-current="page"] > span {
+        font-weight: 600;
+        color: var(--teks);
+        border-bottom: 1px solid var(--teks);
+        padding: 4px 8px;
+    }
+
+    /* Menyembunyikan elemen bawaan Tailwind yang bertumpuk jika ada */
+    .paginasi-wadah .hidden.sm\:flex-1.sm\:flex.sm\:items-center.sm\:justify-between {
+        width: 100%;
+    }
+
+    /* 1. Atur tinggi wadah tabel agar bisa di-scroll */
+    .tabel-wadah {
+        max-height: calc(100vh - 260px); /* Menyesuaikan tinggi sisa layar */
+        overflow-y: auto;
+        border-bottom: 1px solid var(--garis);
+    }order-bottom: 1px solid var(--garis);
+
+    /* 2. Buat header tabel tetap menempel di atas saat di-scroll */
+    .tabel-wadah thead th {
+        position: sticky;
+        top: 0;
+        background-color: var(--permukaan); /* Warna latar header bawaan desain */
+        z-index: 10;
+        box-shadow: 0 1px 0 var(--garis); /* Pengganti border-bottom untuk elemen sticky */
+    }
+
+    /* 3. Percantik bentuk scrollbar (khusus webkit/Chrome/Edge) */
+    .tabel-wadah::-webkit-scrollbar {
+        width: 8px;
+    }
+    .tabel-wadah::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .tabel-wadah::-webkit-scrollbar-thumb {
+        background-color: var(--garis);
+        border-radius: 4px;
+    }
 </style>
 
 <div class="header-halaman">
@@ -108,14 +183,22 @@
 @endphp
 
 @if($stokTipis->count() > 0)
-<div class="peringatan-stok">
-    <div style="font-weight: 600; margin-bottom: 4px;">Peringatan Stok: {{ $stokTipis->count() }} barang menipis atau habis</div>
-    <div class="teks-kecil teks-redup" style="line-height: 1.8;">
-        @foreach($stokTipis as $tipis)
-            <a href="/admin/{{ $tipis->id }}/edit" style="color: var(--teks); text-decoration: none; border-bottom: 1px dotted var(--teks-redup); margin-right: 12px;">
-                {{ $tipis->nama_item }} (sisa {{ $tipis->stok }})
+<div class="peringatan-stok" style="margin-bottom: 32px;">
+    <div style="font-weight: 600; margin-bottom: 8px;">
+        ⚠️ Terdapat {{ $stokTipis->count() }} barang yang menipis atau habis
+    </div>
+    <div class="teks-kecil teks-redup" style="line-height: 1.8; display: flex; flex-wrap: wrap; gap: 8px;">
+        @foreach($stokTipis->take(10) as $tipis)
+            <a href="/admin/produk/{{ $tipis->id }}/edit" style="color: var(--teks); text-decoration: none; border: 1px solid var(--garis); padding: 2px 8px; border-radius: 4px; background: white;">
+                {{ $tipis->nama_item }} <span style="color: {{ $tipis->stok <= 0 ? 'var(--aksen)' : 'var(--teks-redup)' }}; font-weight: bold;">(sisa {{ $tipis->stok }})</span>
             </a>
         @endforeach
+        
+        @if($stokTipis->count() > 10)
+            <span style="padding: 2px 8px; border-radius: 4px; background: transparent; border: 1px dashed var(--garis); color: var(--teks-redup);">
+                ...dan {{ $stokTipis->count() - 10 }} barang lainnya
+            </span>
+        @endif
     </div>
 </div>
 @endif
@@ -137,8 +220,19 @@
         @endif
     </form>
 
-    <!-- SATU-SATUNYA TOMBOL AKSEN TERAKOTA -->
-    <a href="/admin/produk/create" class="btn-utama">Tambah Barang Baru</a>
+    <div style="display: flex; gap: 12px;">
+        <!-- INPUT FILE TERSEMBUNYI & TOMBOL IMPORT -->
+        <form action="/admin/produk/import" method="POST" enctype="multipart/form-data" id="formImportExcel">
+            @csrf
+            <input type="file" name="file_excel" id="file_excel" accept=".xlsx, .xls" style="display: none;" onchange="document.getElementById('formImportExcel').submit()">
+            <button type="button" class="btn-utama" onclick="document.getElementById('file_excel').click()">
+                📥 Import Excel
+            </button>
+        </form>
+
+        <!-- SATU-SATUNYA TOMBOL AKSEN TERAKOTA -->
+        <a href="/admin/produk/create" class="btn-utama">Tambah Barang Baru</a>
+    </div>
 </div>
 
 <div class="tabel-wadah">
@@ -213,9 +307,5 @@
             @endforelse
         </tbody>
     </table>
-</div>
-
-<div class="paginasi-wadah">
-    {{ $products->links() }}
 </div>
 @endsection
