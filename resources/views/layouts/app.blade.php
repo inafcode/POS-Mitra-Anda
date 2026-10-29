@@ -175,11 +175,21 @@
         <aside class="sidebar">
             <a href="/admin" class="sidebar-brand">Mitra Anda</a>
             <ul class="nav-list">
-                <li><a href="/admin" class="nav-item {{ request()->is('admin') && !request()->is('admin/*') ? 'aktif' : '' }}">Ringkasan</a></li>
-                <li><a href="/admin/produk" class="nav-item {{ request()->is('admin/produk*') || request()->is('admin/create') || request()->is('admin/*/edit') ? 'aktif' : '' }}">Katalog Barang</a></li>
-                <li><a href="/kasir" class="nav-item {{ request()->is('kasir*') ? 'aktif' : '' }}">Kasir POS</a></li>
-                <li><a href="/admin/instansi" class="nav-item {{ request()->is('admin/instansi*') ? 'aktif' : '' }}">Mitra Instansi</a></li>
-                <li><a href="/laporan" class="nav-item {{ request()->is('laporan*') ? 'aktif' : '' }}">Buku Kas</a></li>
+                <li>
+                    <a href="/admin" class="nav-item {{ request()->is('admin') && !request()->is('admin/*') ? 'aktif' : '' }}">Ringkasan</a>
+                </li>
+                <li>
+                    <a href="/admin/produk" class="nav-item {{ request()->is('admin/produk*') || request()->is('admin/create') || request()->is('admin/*/edit') ? 'aktif' : '' }}">Katalog Barang</a>
+                </li>
+                <li>
+                    <a href="/kasir" class="nav-item {{ request()->is('kasir*') ? 'aktif' : '' }}">Kasir POS</a>
+                </li>
+                <li>
+                    <a href="/admin/instansi" class="nav-item {{ request()->is('admin/instansi*') ? 'aktif' : '' }}">Mitra Instansi</a>
+                </li>
+                <li>
+                    <a href="/laporan" class="nav-item {{ request()->is('laporan*') ? 'aktif' : '' }}">Buku Kas</a>
+                </li>
             </ul>
             <div class="sidebar-footer">
                 <strong>{{ Auth::user()->name ?? 'Pemilik Toko' }}</strong>

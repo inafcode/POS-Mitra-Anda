@@ -7,17 +7,17 @@
     .bar-kontrol {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-end;
         gap: 24px;
-        flex-wrap: wrap;
         margin-bottom: 32px;
+        border-bottom: 1px solid var(--garis);
+        padding-bottom: 16px;
     }
 
     .form-filter {
         display: flex;
         align-items: center;
         gap: 12px;
-        flex-wrap: wrap;
     }
 
     .input-pencarian {
@@ -28,14 +28,7 @@
         font-family: inherit;
         font-size: 15px;
         color: var(--teks);
-        min-width: 260px;
-    }
-
-    .input-pencarian:focus,
-    .select-filter:focus {
-        outline: 2px solid var(--teks);
-        outline-offset: 1px;
-        background: #FDFBF7;
+        width: 300px;
     }
 
     .select-filter {
@@ -49,8 +42,8 @@
     }
 
     .foto-pratinjau {
-        width: 38px;
-        height: 38px;
+        width: 40px;
+        height: 40px;
         object-fit: cover;
         border-radius: 2px;
         border: 1px solid var(--garis);
@@ -61,7 +54,7 @@
         background-color: var(--permukaan);
         padding: 16px 20px;
         font-size: 14px;
-        margin-bottom: 32px;
+        margin-bottom: 48px;
     }
 
     .btn-aksi-teks {
@@ -90,17 +83,11 @@
     }
 </style>
 
-<!-- Header Halaman -->
 <div class="header-halaman">
     <div>
         <h1>Katalog Barang</h1>
-        <p class="teks-redup teks-kecil">
-            Kelola persediaan barang fisik, jasa, dan pembaruan harga
-        </p>
+        <p class="teks-redup teks-kecil">Kelola daftar produk, jasa, dan ketersediaan stok fisik</p>
     </div>
-
-    <!-- SATU-SATUNYA TOMBOL AKSEN TERAKOTA PADA LAYAR INI -->
-    <a href="/admin/create" class="btn-utama">Tambah Barang</a>
 </div>
 
 @if(session('success'))
@@ -109,9 +96,10 @@
 </div>
 @endif
 
-<!-- Peringatan Stok Menipis -->
+<!-- Peringatan Stok Tipis -->
 @php
-    $stokTipis = \App\Models\Product::where('tipe', 'Barang')->get()->filter(function($item) {
+    $stokTipis = $products->filter(function($item) {
+        if ($item->tipe !== 'Barang') return false;
         if ($item->pemilik === 'Kado Koeni') {
             return $item->stok <= 0;
         }
@@ -121,53 +109,50 @@
 
 @if($stokTipis->count() > 0)
 <div class="peringatan-stok">
-    <div style="font-weight: 500; margin-bottom: 4px;">
-        Peringatan: Ada {{ $stokTipis->count() }} barang yang stoknya menipis atau habis.
-    </div>
-    <div class="teks-kecil teks-redup">
-        @foreach($stokTipis as $st)
-            <span>{{ $st->nama_item }} ({{ $st->pemilik }} — sisa {{ $st->stok }})</span>@if(!$loop->last), @endif
+    <div style="font-weight: 600; margin-bottom: 4px;">Peringatan Stok: {{ $stokTipis->count() }} barang menipis atau habis</div>
+    <div class="teks-kecil teks-redup" style="line-height: 1.8;">
+        @foreach($stokTipis as $tipis)
+            <a href="/admin/{{ $tipis->id }}/edit" style="color: var(--teks); text-decoration: none; border-bottom: 1px dotted var(--teks-redup); margin-right: 12px;">
+                {{ $tipis->nama_item }} (sisa {{ $tipis->stok }})
+            </a>
         @endforeach
     </div>
 </div>
 @endif
 
-<!-- Bar Pencarian & Filter Toko -->
 <div class="bar-kontrol">
-    <form action="/admin/produk" method="GET" class="form-filter" style="width: 100%; justify-content: space-between;">
-        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-            <select name="pemilik" onchange="this.form.submit()" class="select-filter">
-                <option value="">Semua Unit Toko</option>
-                <option value="Mitra Anda" {{ ($pemilik ?? '') == 'Mitra Anda' ? 'selected' : '' }}>Mitra Anda</option>
-                <option value="Kado Koeni" {{ ($pemilik ?? '') == 'Kado Koeni' ? 'selected' : '' }}>Kado Koeni</option>
-            </select>
+    <form action="/admin/produk" method="GET" class="form-filter">
+        <select name="pemilik" onchange="this.form.submit()" class="select-filter">
+            <option value="">Semua Toko</option>
+            <option value="Mitra Anda" {{ request('pemilik') == 'Mitra Anda' ? 'selected' : '' }}>Mitra Anda</option>
+            <option value="Kado Koeni" {{ request('pemilik') == 'Kado Koeni' ? 'selected' : '' }}>Kado Koeni</option>
+        </select>
 
-            <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Cari nama barang atau barcode..." class="input-pencarian">
-
-            <button type="submit" class="btn-sekunder">Cari</button>
-            
-            @if(!empty($search) || !empty($pemilik))
-                <a href="/admin/produk" class="btn-aksi-teks">Atur ulang</a>
-            @endif
-        </div>
-
-        <span class="teks-kecil teks-redup angka">{{ $products->total() }} barang terdaftar</span>
+        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama barang atau barcode..." class="input-pencarian">
+        
+        <button type="submit" class="btn-sekunder">Cari</button>
+        
+        @if(request('search') || request('pemilik'))
+            <a href="/admin/produk" class="btn-aksi-teks" style="margin-left: 8px;">Atur Ulang</a>
+        @endif
     </form>
+
+    <!-- SATU-SATUNYA TOMBOL AKSEN TERAKOTA -->
+    <a href="/admin/produk/create" class="btn-utama">Tambah Barang Baru</a>
 </div>
 
-<!-- Tabel Daftar Barang -->
 <div class="tabel-wadah">
     <table class="tabel-data">
         <thead>
             <tr>
                 <th style="width: 50px; text-align: center;">Foto</th>
-                <th style="width: 130px;">Barcode</th>
-                <th>Nama Barang & Toko</th>
+                <th style="width: 140px;">Barcode</th>
+                <th>Nama Barang & Pemilik</th>
                 <th style="width: 130px;">Kategori</th>
                 <th class="rata-kanan" style="width: 120px;">Harga Modal</th>
-                <th class="rata-kanan" style="width: 120px;">Harga Jual</th>
-                <th class="rata-kanan" style="width: 100px;">Stok</th>
-                <th style="width: 120px; text-align: right;">Aksi</th>
+                <th class="rata-kanan" style="width: 120px;">Jual Ecer</th>
+                <th class="rata-kanan" style="width: 90px;">Stok</th>
+                <th style="width: 110px; text-align: right;">Aksi</th>
             </tr>
         </thead>
         <tbody>
@@ -175,7 +160,7 @@
             <tr>
                 <td style="text-align: center; vertical-align: middle;">
                     @if($item->foto_produk)
-                        <img src="{{ asset('storage/' . $item->foto_produk) }}" class="foto-pratinjau" alt="">
+                        <img src="{{ asset('storage/' . $item->foto_produk) }}" alt="Foto {{ $item->nama_item }}" class="foto-pratinjau">
                     @else
                         <span class="teks-kecil teks-redup">—</span>
                     @endif
@@ -185,9 +170,7 @@
                 </td>
                 <td>
                     <div style="font-weight: 500;">{{ $item->nama_item }}</div>
-                    <div class="teks-kecil teks-redup" style="margin-top: 2px;">
-                        {{ $item->pemilik ?? 'Mitra Anda' }}
-                    </div>
+                    <div class="teks-kecil teks-redup" style="margin-top: 2px;">{{ $item->pemilik ?? 'Mitra Anda' }}</div>
                 </td>
                 <td class="teks-kecil teks-redup">
                     <div>{{ $item->tipe }}</div>
@@ -210,10 +193,10 @@
                         <span class="teks-kecil teks-redup">Jasa</span>
                     @endif
                 </td>
-                <td class="rata-kanan">
-                    <div style="display: flex; justify-content: flex-end; gap: 12px; align-items: baseline;">
-                        <a href="/admin/{{ $item->id }}/edit" class="btn-aksi-teks">Ubah</a>
-                        <form action="/admin/{{ $item->id }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus barang {{ addslashes($item->nama_item) }} dari katalog?')">
+                <td class="rata-kanan" style="vertical-align: middle;">
+                    <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                        <a href="/admin/produk/{{ $item->id }}/edit" class="btn-aksi-teks">Ubah</a>
+                        <form action="/admin/produk/{{ $item->id }}" method="POST" style="display: inline;" onsubmit="return confirm('Hapus permanen barang {{ addslashes($item->nama_item) }}?')">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn-aksi-teks bahaya">Hapus</button>

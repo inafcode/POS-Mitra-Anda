@@ -20,11 +20,12 @@
         <h1>Tambah Barang</h1>
         <p class="teks-redup teks-kecil">Pencatatan barang fisik atau jasa baru ke dalam katalog toko</p>
     </div>
+    <!-- Tombol kembali disesuaikan ke rute katalog barang -->
     <a href="/admin/produk" class="btn-sekunder">Batal & Kembali</a>
 </div>
 
 <div class="form-wadah">
-    <form action="/admin" method="POST" enctype="multipart/form-data">
+    <form action="/admin/produk" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="form-grid">
             <div class="grup-input form-baris-penuh">

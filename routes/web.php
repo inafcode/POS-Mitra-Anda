@@ -1,63 +1,104 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use App\Http\Controllers\PosController;
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\PosController;
 use App\Http\Controllers\InstansiController;
 
-Route::get('/', [AdminController::class, 'catalog']);
+/*
+|--------------------------------------------------------------------------
+| Rute Publik & Autentikasi
+|--------------------------------------------------------------------------
+*/
+Route::get('/', [AdminController::class, 'catalog'])->name('home');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout']);
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+/*
+|--------------------------------------------------------------------------
+| Rute Terproteksi (Wajib Login)
+|--------------------------------------------------------------------------
+*/
 Route::middleware(['auth'])->group(function () {
-    
-    // Halaman Kasir
-    Route::get('/kasir', [PosController::class, 'kasir']);
-    Route::get('/api/search-product', [PosController::class, 'search']);
-    Route::post('/kasir/cetak', [PosController::class, 'cetak']);
 
-    // Halaman Laporan Cashflow & Bagi Hasil
-    Route::get('/laporan', [PosController::class, 'laporan']);
-    Route::post('/laporan/cashflow', [PosController::class, 'simpanCashflow']);
-    Route::post('/laporan/pengeluaran', [PosController::class, 'tambahPengeluaran']);
-    Route::delete('/laporan/pengeluaran/{id}', [PosController::class, 'hapusPengeluaran']);
-    Route::delete('/laporan/detail/{id}', [PosController::class, 'hapusDetailTransaksi']);
-    Route::get('/laporan/export', [PosController::class, 'exportExcel']);
-
-    // Halaman Ringkasan (Dashboard Editorial)
+    /*
+    |--------------------------------------------------------------------------
+    | 1. Dashboard Ringkasan
+    |--------------------------------------------------------------------------
+    */
     Route::get('/admin', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
-    // Halaman Manajemen Stok/CRUD Barang (Gudang)
-    Route::get('/admin/produk', [AdminController::class, 'index'])->name('admin.produk');
-    Route::get('/admin/create', [AdminController::class, 'create']);
-    Route::post('/admin', [AdminController::class, 'store']);
-    Route::get('/admin/{id}/edit', [AdminController::class, 'edit']);
-    Route::put('/admin/{id}', [AdminController::class, 'update']);
-    Route::delete('/admin/{id}', [AdminController::class, 'destroy']);
+    /*
+    |--------------------------------------------------------------------------
+    | 2. Katalog Barang (CRUD Gudang)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('admin/produk')->name('admin.produk.')->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::get('/create', [AdminController::class, 'create'])->name('create');
+        Route::post('/', [AdminController::class, 'store'])->name('store');
+        Route::get('/{id}/edit', [AdminController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [AdminController::class, 'update'])->name('update');
+        Route::delete('/{id}', [AdminController::class, 'destroy'])->name('destroy');
+    });
 
-    // Manajemen Mitra Instansi & Rekap Bon di Panel Admin (Tetap Ada)
-    Route::get('/admin/instansi', [InstansiController::class, 'index']);
-    Route::post('/admin/instansi', [InstansiController::class, 'store']);
-    Route::put('/admin/instansi/{id}', [InstansiController::class, 'update']);
-    Route::delete('/admin/instansi/{id}', [InstansiController::class, 'destroy']);
+    /*
+    |--------------------------------------------------------------------------
+    | 3. Kasir POS
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/kasir', [PosController::class, 'kasir'])->name('kasir.index');
+    Route::get('/api/search-product', [PosController::class, 'search'])->name('kasir.search');
+    Route::post('/kasir/cetak', [PosController::class, 'cetak'])->name('kasir.cetak');
 
-    Route::get('/admin/instansi/{id}/laporan', [InstansiController::class, 'laporanBon']);
-    Route::post('/admin/transaksi/{id}/lunasi', [InstansiController::class, 'lunasiBon']);
-    Route::get('/admin/instansi/{id}/export', [InstansiController::class, 'exportExcelBon']);
-    Route::post('/admin/instansi/{id}/pelunasan-massal', [InstansiController::class, 'prosesPelunasanMassal']);
-    Route::get('/admin/nota/instansi/{id}', [InstansiController::class, 'cetakNotaInstansi']);
+    /*
+    |--------------------------------------------------------------------------
+    | 4. Buku Kas & Laporan Cashflow
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('laporan')->name('laporan.')->group(function () {
+        Route::get('/', [PosController::class, 'laporan'])->name('index');
+        Route::post('/cashflow', [PosController::class, 'simpanCashflow'])->name('cashflow');
+        Route::post('/pengeluaran', [PosController::class, 'tambahPengeluaran'])->name('pengeluaran.tambah');
+        Route::delete('/pengeluaran/{id}', [PosController::class, 'hapusPengeluaran'])->name('pengeluaran.hapus');
+        Route::delete('/detail/{id}', [PosController::class, 'hapusDetailTransaksi'])->name('detail.hapus');
+        Route::get('/export', [PosController::class, 'exportExcel'])->name('export');
+    });
 
-    Route::get('/admin/instansi/{id}/kwitansi', [InstansiController::class, 'cetakKwitansi']);
+    /*
+    |--------------------------------------------------------------------------
+    | 5. Mitra Instansi & Rekap Bon (Admin Panel)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('admin/instansi')->name('admin.instansi.')->group(function () {
+        Route::get('/', [InstansiController::class, 'index'])->name('index');
+        Route::post('/', [InstansiController::class, 'store'])->name('store');
+        Route::put('/{id}', [InstansiController::class, 'update'])->name('update');
+        Route::delete('/{id}', [InstansiController::class, 'destroy'])->name('destroy');
 
-    // ==========================================
-    // PORTAL KHUSUS INSTANSI (B2B ONLINE BON)
-    // ==========================================
-    Route::get('/portal-instansi', [InstansiController::class, 'portal']);
-    Route::post('/portal-instansi/cart', [InstansiController::class, 'addToCart']);
-    Route::delete('/portal-instansi/cart/{id}', [InstansiController::class, 'removeFromCart']);
-    Route::post('/portal-instansi/checkout', [InstansiController::class, 'checkoutCart']);
+        Route::get('/{id}/laporan', [InstansiController::class, 'laporanBon'])->name('laporan');
+        Route::get('/{id}/export', [InstansiController::class, 'exportExcelBon'])->name('export');
+        Route::post('/{id}/pelunasan-massal', [InstansiController::class, 'prosesPelunasanMassal'])->name('pelunasan');
+        Route::get('/{id}/kwitansi', [InstansiController::class, 'cetakKwitansi'])->name('kwitansi');
+    });
+
+    // Aksi Transaksi Khusus Nota & Pelunasan Satuan
+    Route::post('/admin/transaksi/{id}/lunasi', [InstansiController::class, 'lunasiBon'])->name('admin.transaksi.lunasi');
+    Route::get('/admin/nota/instansi/{id}', [InstansiController::class, 'cetakNotaInstansi'])->name('admin.nota.instansi');
+
+    /*
+    |--------------------------------------------------------------------------
+    | 6. Portal Mandiri Instansi (B2B Online Bon)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('portal-instansi')->name('portal.')->group(function () {
+        Route::get('/', [InstansiController::class, 'portal'])->name('index');
+        Route::post('/cart', [InstansiController::class, 'addToCart'])->name('cart.add');
+        Route::delete('/cart/{id}', [InstansiController::class, 'removeFromCart'])->name('cart.remove');
+        Route::post('/checkout', [InstansiController::class, 'checkoutCart'])->name('checkout');
+    });
+
 });

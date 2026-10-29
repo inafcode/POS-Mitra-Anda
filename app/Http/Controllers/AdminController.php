@@ -10,7 +10,7 @@ use Carbon\Carbon;
 
 class AdminController extends Controller
 {
-    // 1. Halaman Ringkasan (Buku Kas & Metrik Dashboard)
+    // Method untuk halaman Ringkasan (URL: /admin)
     public function dashboard()
     {
         $hariIni = Carbon::today();
@@ -36,6 +36,7 @@ class AdminController extends Controller
         $totalPiutang = Transaction::where('status_pembayaran', 'Belum Lunas')->sum('total_bayar');
         $produkTerlaris = Product::orderBy('stok', 'asc')->take(5)->get();
 
+        // Mengarah ke file dashboard.blade.php
         return view('admin.dashboard', compact(
             'pendapatanHariIni',
             'pesananPerluDiproses',
@@ -47,30 +48,53 @@ class AdminController extends Controller
         ));
     }
 
+    // Method untuk CRUD Katalog Barang (URL: /admin/produk)
     public function index(Request $request)
     {
-        $search = $request->query('search');
         $pemilik = $request->query('pemilik');
+        $search = $request->query('search');
 
         $query = Product::query();
 
-        // 1. Filter berdasarkan pencarian nama atau barcode
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('nama_item', 'like', '%' . $search . '%')
-                  ->orWhere('barcode', 'like', '%' . $search . '%');
-            });
-        }
-
-        // 2. Filter berdasarkan pemilik toko (Mitra Anda / Kado Koeni)
         if ($pemilik) {
             $query->where('pemilik', $pemilik);
         }
 
-        // Ambil data (paginate 20 item per halaman agar tidak terlalu panjang)
-        $products = $query->latest()->paginate(20)->withQueryString();
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('nama_item', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
 
-        return view('admin.index', compact('products', 'search', 'pemilik'));
+        $products = $query->latest()->paginate(15)->withQueryString();
+
+        // PASTIKAN BARIS INI: me-return view 'admin.produk', BUKAN 'admin.index' atau 'admin.dashboard'
+        return view('admin.produk', compact('products', 'pemilik', 'search'));
+    }
+
+    // Fungsi untuk Halaman Katalog Barang (/admin/produk)
+    public function produk(Request $request)
+    {
+        $pemilik = $request->query('pemilik');
+        $search = $request->query('search');
+
+        $query = Product::query();
+
+        if ($pemilik) {
+            $query->where('pemilik', $pemilik);
+        }
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('nama_item', 'like', "%{$search}%")
+                  ->orWhere('barcode', 'like', "%{$search}%");
+            });
+        }
+
+        $products = $query->latest()->paginate(15)->withQueryString();
+
+        return view('admin.produk', compact('products', 'pemilik', 'search'));
     }
 
     // Membuka halaman Formulir Tambah Barang
@@ -107,7 +131,7 @@ class AdminController extends Controller
 
         Product::create($data);
 
-        return redirect('/admin')->with('success', 'Barang baru beserta foto berhasil ditambahkan!');
+        return redirect('/admin/produk')->with('success', 'Barang baru berhasil ditambahkan!');
     }
 
     // Membuka halaman Formulir Edit
@@ -143,7 +167,7 @@ class AdminController extends Controller
 
         $product->update($data); 
 
-        return redirect('/admin')->with('success', 'Data barang dan foto berhasil diperbarui!');
+        return redirect('/admin/produk')->with('success', 'Data barang dan foto berhasil diperbarui!');
     }
 
     // Menghapus data beserta file fotonya dari Database & Folder

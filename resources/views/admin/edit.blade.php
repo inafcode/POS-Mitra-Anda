@@ -21,11 +21,12 @@
         <h1>Ubah Data Barang</h1>
         <p class="teks-redup teks-kecil">{{ $product->nama_item }}</p>
     </div>
+    <!-- Tombol kembali disesuaikan ke rute katalog barang -->
     <a href="/admin/produk" class="btn-sekunder">Batal & Kembali</a>
 </div>
 
 <div class="form-wadah">
-    <form action="/admin/{{ $product->id }}" method="POST" enctype="multipart/form-data">
+    <form action="/admin/produk/{{ $product->id }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
         <div class="form-grid">
