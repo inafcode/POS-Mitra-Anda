@@ -193,6 +193,11 @@
                 <li>
                     <a href="/admin/pesanan" class="nav-item {{ request()->is('admin/pesanan*') ? 'aktif' : '' }}">Pesanan Instansi</a>
                 </li>
+                <li>
+                    <a href="/" style="display: block; padding: 12px 16px; color: var(--teks-redup); text-decoration: none; font-size: 14px; font-weight: 500; border-top: 1px solid var(--garis); margin-top: 16px;">
+                        Lihat Katalog Publik
+                    </a>
+                </li>
             </ul>
             <div class="sidebar-footer">
                 <strong>{{ Auth::user()->name ?? 'Pemilik Toko' }}</strong>

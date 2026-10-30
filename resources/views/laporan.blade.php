@@ -4,435 +4,354 @@
 
 @section('content')
 <style>
-    .seksi-laporan {
-        margin-top: 48px;
-        padding-top: 40px;
-        border-top: 1px solid var(--garis);
-    }
-
-    .judul-bagian {
-        font-size: 20px;
-        margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-    }
-
-    /* Pembeda kepemilikan entitas: Tenang & Nostalgik */
-    .baris-kado {
-        background-color: rgba(237, 229, 216, 0.45);
-    }
-    .baris-kado:hover {
-        background-color: var(--permukaan) !important;
-    }
+    /* Tipografi & Warna Dasar */
+    .judul-halaman { font-family: 'Fraunces', serif; font-size: 28px; color: var(--teks); }
+    .teks-redup { color: var(--teks-redup); }
     
-    .tag-entitas {
-        display: inline-block;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        font-weight: 500;
-        color: var(--teks-redup);
+    /* Tabel ala Excel / Folio */
+    .tabel-excel {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+        background-color: #FAFAFA;
+        border: 2px solid var(--teks);
+        margin-bottom: 24px;
     }
-    .tag-entitas.kado {
+    .tabel-excel th, .tabel-excel td {
+        border: 1px solid var(--garis);
+        padding: 10px 16px;
+        vertical-align: middle;
+    }
+    .tabel-excel th {
+        background-color: var(--permukaan);
         color: var(--teks);
         font-weight: 600;
+        text-align: center;
+        border-bottom: 2px solid var(--teks);
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 0.05em;
+    }
+    
+    /* Baris Kategori Utama (A & B) */
+    .baris-kategori td {
+        background-color: var(--permukaan);
+        font-weight: 600;
+        font-size: 14px;
+        border-top: 2px solid var(--teks);
+        border-bottom: 1px solid var(--teks);
+    }
+    
+    /* Baris Kesimpulan (Total) */
+    .baris-total td {
+        background-color: #F0EBE1;
+        font-weight: 600;
+        border-top: 1px solid var(--teks);
+        border-bottom: 2px solid var(--teks);
     }
 
-    /* Input form angka di dalam tabel */
-    .input-angka-tabel {
-        background: transparent;
-        border: 1px solid var(--garis);
+    .tabel-excel td.keterangan { font-weight: 500; }
+    .tabel-excel td.angka { text-align: right; font-variant-numeric: tabular-nums; }
+    
+    /* Input di dalam sel Excel */
+    .input-sel {
+        width: 100%;
+        background-color: #FFFFFF;
+        border: 1px dashed var(--teks-redup);
         border-radius: 2px;
         font-family: inherit;
         font-size: 15px;
         padding: 4px 8px;
         color: var(--teks);
-    }
-    .input-angka-tabel:focus {
-        outline: 2px solid var(--teks);
-        outline-offset: 1px;
-        background: #FDFBF7;
-    }
-
-    /* Layout 3 Bagian Bawah */
-    .grid-buku-bawah {
-        display: grid;
-        grid-template-columns: 1.2fr 1fr 1fr;
-        gap: 32px;
-        align-items: start;
-    }
-
-    .kotak-kolom {
-        border-top: 2px solid var(--teks);
-        padding-top: 16px;
-    }
-
-    .kotak-kolom-judul {
-        font-size: 15px;
+        text-align: right;
         font-weight: 600;
-        margin-bottom: 16px;
-        color: var(--teks);
-        letter-spacing: 0.02em;
+    }
+    .input-sel:focus {
+        outline: 2px solid var(--aksen);
+        outline-offset: -1px;
+        border-color: transparent;
+        background-color: #FFFDF5;
     }
 
-    .tabel-padat {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 14px;
-    }
-    .tabel-padat td {
-        padding: 10px 0;
-        border-bottom: 1px solid var(--garis);
-        vertical-align: middle;
-    }
+    /* Tabel Rincian Atas (Polos) */
+    .tabel-polos { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .tabel-polos th, .tabel-polos td { padding: 8px 12px; border-bottom: 1px solid var(--garis); }
+    .tabel-polos th { text-align: left; color: var(--teks-redup); font-weight: 500; }
+    .tabel-polos td.angka { text-align: right; }
+    .baris-kado { background-color: rgba(237, 229, 216, 0.45); }
 
-    /* Tombol Aksi Minimalis */
+    /* Tombol-tombol */
+    .btn-utama {
+        background-color: var(--aksen); color: #FBF7F0; font-weight: 500; font-size: 15px;
+        padding: 12px 24px; border-radius: 4px; border: none; cursor: pointer;
+        display: inline-flex; justify-content: center; width: 100%; transition: 150ms;
+    }
+    .btn-utama:hover { opacity: 0.9; }
+    .btn-sekunder {
+        background: transparent; border: 1px solid var(--garis); border-radius: 4px;
+        padding: 6px 16px; font-size: 13px; color: var(--teks); font-weight: 500;
+    }
     .btn-batal-teks {
-        background: none;
-        border: none;
-        color: var(--teks-redup);
-        cursor: pointer;
-        font-size: 13px;
-        text-decoration: underline;
-        font-family: inherit;
-        padding: 0;
-    }
-    .btn-batal-teks:hover {
-        color: var(--aksen);
-    }
-
-    .info-rekening {
-        padding: 16px 20px;
-        background-color: var(--permukaan);
-        border-radius: 4px;
-        font-size: 13px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 32px;
-    }
-
-    @media (max-width: 1024px) {
-        .grid-buku-bawah {
-            grid-template-columns: 1fr;
-            gap: 40px;
-        }
+        background: none; border: none; color: var(--teks-redup); cursor: pointer;
+        font-size: 12px; text-decoration: underline;
     }
 </style>
 
-<!-- Header Halaman & Filter Tanggal -->
-<div class="header-halaman">
+<!-- Header & Tanggal -->
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--teks);">
     <div>
-        <h1>Buku Kas & Cashflow</h1>
-        <p class="teks-redup teks-kecil">
-            Catatan penerimaan kas laci dan mutasi harian toko
-        </p>
+        <h1 class="judul-halaman">Buku Folio Kasir</h1>
+        <p class="teks-redup teks-kecil mt-1">Rekapitulasi penjualan, kas fisik laci, dan bagi hasil dompet</p>
     </div>
-
     <div style="display: flex; align-items: center; gap: 16px;">
         <form action="/laporan" method="GET" style="display: flex; align-items: center; gap: 8px;">
-            <label for="input-tanggal" class="teks-kecil teks-redup">Tanggal:</label>
-            <input type="date" id="input-tanggal" name="tanggal" value="{{ $tanggal }}" onchange="this.form.submit()" class="input-angka-tabel" style="padding: 6px 12px; font-weight: 500;">
+            <label class="teks-kecil teks-redup">Pilih Tanggal:</label>
+            <input type="date" name="tanggal" value="{{ $tanggal }}" onchange="this.form.submit()" class="input-sel" style="width: auto; background: transparent; border: 1px solid var(--garis);">
         </form>
-
-        <a href="/laporan/export?tanggal={{ $tanggal }}" class="btn-sekunder">Ekspor Catatan</a>
-        <a href="/kasir" class="btn-sekunder">Buka Kasir</a>
+        <a href="/laporan/export?tanggal={{ $tanggal }}" class="btn-sekunder" style="background: var(--permukaan);">Cetak Excel</a>
     </div>
 </div>
 
 @if(session('success'))
-<div style="padding: 14px 20px; border-left: 2px solid var(--teks); background-color: var(--permukaan); font-size: 14px; margin-bottom: 32px;">
+<div style="padding: 12px 16px; border-left: 4px solid var(--teks); background-color: var(--permukaan); font-size: 14px; font-weight: 500; margin-bottom: 24px;">
     {{ session('success') }}
 </div>
 @endif
 
-<!-- Info Non-Tunai Rekening -->
-@if(($nonTunaiKado ?? 0) > 0 || ($nonTunaiMitra ?? 0) > 0)
-<div class="info-rekening">
-    <span class="teks-redup">Penerimaan Non-Tunai (QRIS & Transfer langsung ke rekening bank, tidak masuk laci kasir):</span>
-    <div style="display: flex; gap: 24px;" class="angka">
-        <span>Kado Koeni: <strong>Rp {{ number_format($nonTunaiKado ?? 0, 0, ',', '.') }}</strong></span>
-        <span style="color: var(--garis);">|</span>
-        <span>Mitra Anda: <strong>Rp {{ number_format($nonTunaiMitra ?? 0, 0, ',', '.') }}</strong></span>
-    </div>
-</div>
-@endif
-
-<!-- TABEL 1: RINCIAN PENJUALAN BARANG -->
-<section>
-    <div class="judul-bagian">
-        <h2>Rincian Barang Terjual</h2>
-        <span class="teks-kecil teks-redup">Baris berwarna menandai kepemilikan Kado Koeni</span>
-    </div>
-
-    <div class="tabel-wadah">
-        <table class="tabel-data">
-            <thead>
-                <tr>
-                    <th style="width: 70px;">ID</th>
-                    <th style="width: 140px;">Nota</th>
-                    <th>Nama Barang</th>
-                    <th style="width: 110px;">Pemilik</th>
-                    <th style="width: 60px; text-align: center;">Qty</th>
-                    <th style="width: 70px; text-align: center;">Satuan</th>
-                    <th class="rata-kanan" style="width: 120px;">Harga</th>
-                    <th class="rata-kanan" style="width: 130px;">Subtotal</th>
-                    <th style="width: 100px; text-align: center;">Waktu</th>
-                    <th style="width: 80px; text-align: center;">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($details as $d)
-                <tr class="{{ $d->pemilik == 'Kado Koeni' ? 'baris-kado' : '' }}">
-                    <td class="angka teks-redup teks-kecil">#{{ $d->id + 8000 }}</td>
-                    <td>
-                        <span class="angka" style="font-weight: 500;">{{ $d->transaction->kode_nota ?? '-' }}</span>
-                        @if(($d->transaction->metode_pembayaran ?? 'Tunai') !== 'Tunai')
-                            <div class="teks-kecil teks-redup">{{ strtoupper($d->transaction->metode_pembayaran) }}</div>
-                        @endif
-                        
-                        <!-- TAMBAHAN: Penanda jika barang ini dari transaksi instansi -->
-                        @if(isset($d->dari_instansi) && $d->dari_instansi)
-                            <div class="teks-kecil" style="color: var(--aksen); font-weight: 500; margin-top: 2px;">
-                                Pelunasan Instansi
-                            </div>
-                        @endif
-                    </td>
-                    <td style="font-weight: 500;">{{ $d->nama_item }}</td>
-                    <td>
-                        <span class="tag-entitas {{ $d->pemilik == 'Kado Koeni' ? 'kado' : '' }}">{{ $d->pemilik }}</span>
-                    </td>
-                    <td class="angka" style="text-align: center;">{{ $d->qty }}</td>
-                    <td class="teks-redup teks-kecil" style="text-align: center;">{{ $d->satuan ?? 'pcs' }}</td>
-                    <td class="rata-kanan angka">Rp {{ number_format($d->harga_jual, 0, ',', '.') }}</td>
-                    <td class="rata-kanan angka" style="font-weight: 500;">Rp {{ number_format($d->subtotal, 0, ',', '.') }}</td>
-                    <td class="angka teks-kecil teks-redup" style="text-align: center;">{{ $d->created_at->format('H:i') }}</td>
-                    <td style="text-align: center;">
-                        <form action="/laporan/detail/{{ $d->id }}" method="POST" onsubmit="return confirm('Batalkan transaksi {{ addslashes($d->nama_item) }}? Stok akan dikembalikan ke gudang.')">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn-batal-teks">Batalkan</button>
-                        </form>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="10">
-                        <div class="state-kosong">Belum ada barang terjual pada tanggal ini.</div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<!-- FORM REKAP CASHFLOW & BAGI HASIL -->
-<form action="/laporan/cashflow" method="POST" class="seksi-laporan">
-    @csrf
-    <input type="hidden" name="tanggal" value="{{ $tanggal }}">
-
-    <!-- TABEL 2: REKAP MODAL & KAS LACI -->
-    <div class="judul-bagian">
-        <h2>Rekapitulasi Kas Laci</h2>
-        <span class="teks-kecil teks-redup">Dihitung dari penerimaan fisik tunai</span>
-    </div>
-
-    <div class="tabel-wadah" style="margin-bottom: 48px;">
-        <table class="tabel-data">
-            <thead>
-                <tr>
-                    <th style="width: 220px;">Unit Toko</th>
-                    <th class="rata-kanan" style="width: 220px;">Modal Awal (Sisa Kemarin)</th>
-                    <th class="rata-kanan">Pemasukan Kas</th>
-                    <th class="rata-kanan">Beban Pengeluaran</th>
-                    <th class="rata-kanan" style="width: 200px;">Total Fisik Laci</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Kado Koeni -->
-                <tr>
-                    <td>
-                        <strong style="font-weight: 500;">Kado Koeni</strong>
-                    </td>
-                    <td class="rata-kanan">
-                        <span class="teks-redup teks-kecil">Rp</span>
-                        <input type="number" name="modal_awal_kado" value="{{ $cashflow->modal_awal_kado }}" class="input-angka-tabel angka rata-kanan" style="width: 140px; font-weight: 500;">
-                        
-                        <!-- TAMBAHAN: Teks bantuan/pengingat uang sisa hari sebelumnya -->
-                        @php
-                            $tglKemarin = \Carbon\Carbon::parse($tanggal)->subDay()->toDateString();
-                            $cashflowKemarin = \App\Models\DailyCashflow::where('tanggal', $tglKemarin)->first();
-                            $sisaKemarinKado = $cashflowKemarin ? ($cashflowKemarin->modal_awal_kado + $cashflowKemarin->total_pemasukan_kado - $cashflowKemarin->total_pengeluaran_kado - $cashflowKemarin->hasil_diambil_kado) : 0;
-                        @endphp
-                        <div class="teks-kecil teks-redup" style="margin-top: 6px;">
-                            Tercatat H-1: Rp {{ number_format($sisaKemarinKado, 0, ',', '.') }}
-                        </div>
-                    </td>
-                    <td class="rata-kanan angka">Rp {{ number_format($pemasukanKado, 0, ',', '.') }}</td>
-                    <td class="rata-kanan angka teks-redup">
-                        {{ $pengeluaranKado > 0 ? 'Rp ' . number_format($pengeluaranKado, 0, ',', '.') : '—' }}
-                    </td>
-                    <td class="rata-kanan angka" style="font-weight: 500;">Rp {{ number_format($totalKado, 0, ',', '.') }}</td>
-                </tr>
-
-                <!-- Mitra Anda -->
-                <tr>
-                    <td>
-                        <strong style="font-weight: 500;">Mitra Anda</strong>
-                    </td>
-                    <td class="rata-kanan">
-                        <span class="teks-redup teks-kecil">Rp</span>
-                        <input type="number" name="modal_awal_mitra" value="{{ $cashflow->modal_awal_mitra }}" class="input-angka-tabel angka rata-kanan" style="width: 140px; font-weight: 500;">
-                        
-                        <!-- TAMBAHAN: Teks bantuan/pengingat uang sisa hari sebelumnya -->
-                        @php
-                            $sisaKemarinMitra = $cashflowKemarin ? ($cashflowKemarin->modal_awal_mitra + $cashflowKemarin->total_pemasukan_mitra - $cashflowKemarin->total_pengeluaran_mitra - $cashflowKemarin->hasil_diambil_mitra) : 0;
-                        @endphp
-                        <div class="teks-kecil teks-redup" style="margin-top: 6px;">
-                            Tercatat H-1: Rp {{ number_format($sisaKemarinMitra, 0, ',', '.') }}
-                        </div>
-                    </td>
-                    <td class="rata-kanan angka">Rp {{ number_format($pemasukanMitra, 0, ',', '.') }}</td>
-                    <td class="rata-kanan angka teks-redup">
-                        {{ $pengeluaranMitra > 0 ? 'Rp ' . number_format($pengeluaranMitra, 0, ',', '.') : '—' }}
-                    </td>
-                    <td class="rata-kanan angka" style="font-weight: 500;">Rp {{ number_format($totalMitra, 0, ',', '.') }}</td>
-                </tr>
-
-                <!-- Grand Total Laci -->
-                <tr style="border-top: 2px solid var(--teks);">
-                    <td colspan="4" style="font-weight: 500; font-size: 15px; padding-top: 20px;">
-                        Total Kas Laci Keseluruhan
-                    </td>
-                    <td class="rata-kanan angka font-judul" style="font-size: 24px; padding-top: 20px;">
-                        Rp {{ number_format($grandTotal, 0, ',', '.') }}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- 3 BAGIAN: BUKU PENGELUARAN, SETORAN HASIL, MODAL BESOK -->
-    <div class="grid-buku-bawah">
-        
-        <!-- Kolom 1: Daftar Catatan Pengeluaran Hari Ini -->
-        <div class="kotak-kolom">
-            <div class="kotak-kolom-judul">Catatan Pengeluaran</div>
-            <table class="tabel-padat">
+<!-- ==========================================
+     BAGIAN 1: RINCIAN JUAL & PENGELUARAN (ATAS)
+     ========================================== -->
+<div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 32px; margin-bottom: 48px;">
+    
+    <!-- Kiri: Penjualan -->
+    <div>
+        <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px;">1. Rincian Penjualan Barang & Jasa</div>
+        <div style="border: 1px solid var(--garis); max-height: 300px; overflow-y: auto; background: #fff;">
+            <table class="tabel-polos">
+                <thead>
+                    <tr style="background: var(--permukaan);">
+                        <th>Nota / Jam</th>
+                        <th>Keterangan Item</th>
+                        <th>Mitra/Kado</th>
+                        <th class="angka">Subtotal</th>
+                        <th style="text-align: center;">Batal</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    @forelse($expenses as $exp)
-                    <tr>
-                        <td style="width: 80px;" class="teks-kecil teks-redup">{{ $exp->pemilik }}</td>
-                        <td>{{ $exp->keterangan }}</td>
-                        <td class="rata-kanan angka" style="width: 90px;">Rp {{ number_format($exp->nominal, 0, ',', '.') }}</td>
-                        <td style="width: 30px; text-align: right;">
-                            <button type="button" onclick="hapusPengeluaran({{ $exp->id }})" class="btn-batal-teks" title="Hapus baris pengeluaran">✕</button>
+                    @forelse($details as $d)
+                    <tr class="{{ $d->pemilik == 'Kado Koeni' ? 'baris-kado' : '' }}">
+                        <td>
+                            <strong>{{ $d->transaction->kode_nota ?? '-' }}</strong><br>
+                            <span class="teks-redup" style="font-size: 11px;">{{ $d->created_at->format('H:i') }}</span>
+                        </td>
+                        <td>{{ $d->nama_item }} <span class="teks-redup" style="font-size: 11px;">({{ $d->qty }}x)</span></td>
+                        <td>{{ $d->pemilik }}</td>
+                        <td class="angka font-medium">Rp {{ number_format($d->subtotal, 0, ',', '.') }}</td>
+                        <td style="text-align: center;">
+                            <form action="/laporan/detail/{{ $d->id }}" method="POST" onsubmit="return confirm('Hapus transaksi ini?')">
+                                @csrf @method('DELETE')
+                                <button type="submit" class="btn-batal-teks">✕</button>
+                            </form>
                         </td>
                     </tr>
                     @empty
-                    <tr>
-                        <td colspan="4" class="state-kosong" style="padding: 16px 0; text-align: left;">Tidak ada pengeluaran laci hari ini.</td>
-                    </tr>
+                    <tr><td colspan="5" style="text-align: center; padding: 24px; color: var(--teks-redup);">Belum ada penjualan.</td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-
-        <!-- Kolom 2: Setoran Bersih yang Diambil -->
-        <div class="kotak-kolom">
-            <div class="kotak-kolom-judul">Setoran / Bagi Hasil</div>
-            <table class="tabel-padat">
-                <tbody>
-                    <tr>
-                        <td>Kado Koeni</td>
-                        <td class="rata-kanan">
-                            <span class="teks-redup teks-kecil">Rp</span>
-                            <input type="number" name="hasil_diambil_kado" value="{{ $cashflow->hasil_diambil_kado }}" class="input-angka-tabel angka rata-kanan" style="width: 130px; font-weight: 500;">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Mitra Anda</td>
-                        <td class="rata-kanan">
-                            <span class="teks-redup teks-kecil">Rp</span>
-                            <input type="number" name="hasil_diambil_mitra" value="{{ $cashflow->hasil_diambil_mitra }}" class="input-angka-tabel angka rata-kanan" style="width: 130px; font-weight: 500;">
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div style="margin-top: 24px;">
-                <!-- SATU-SATUNYA TOMBOL AKSEN TERAKOTA PADA HALAMAN INI -->
-                <button type="submit" class="btn-utama" style="width: 100%; justify-content: center; font-size: 14px; padding: 12px 16px;">
-                    Simpan Buku Kas & Bagi Hasil
-                </button>
-            </div>
-        </div>
-
-        <!-- Kolom 3: Sisa Modal Laci untuk Besok -->
-        <div class="kotak-kolom">
-            <div class="kotak-kolom-judul">Sisa Kas Laci Menginap</div>
-            <table class="tabel-padat">
-                <tbody>
-                    <tr>
-                        <td class="teks-redup">Kado Koeni</td>
-                        <td class="rata-kanan angka" style="font-weight: 500;">Rp {{ number_format($sisaModalKado, 0, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <td class="teks-redup">Mitra Anda</td>
-                        <td class="rata-kanan angka" style="font-weight: 500;">Rp {{ number_format($sisaModalMitra, 0, ',', '.') }}</td>
-                    </tr>
-                    <tr style="border-top: 1px solid var(--teks);">
-                        <td style="font-weight: 500; padding-top: 14px;">Total Menginap</td>
-                        <td class="rata-kanan angka font-judul" style="font-size: 18px; padding-top: 14px;">
-                            Rp {{ number_format($totalSisaModal, 0, ',', '.') }}
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-    </div>
-</form>
-
-<!-- FORM TAMBAH PENGELUARAN BARU -->
-<section class="seksi-laporan" style="margin-bottom: 64px;">
-    <div class="judul-bagian">
-        <h2>Catat Pengeluaran Baru</h2>
-        <span class="teks-kecil teks-redup">Pengeluaran operasional yang diambil langsung dari uang laci</span>
     </div>
 
-    <form action="/laporan/pengeluaran" method="POST" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-        @csrf
-        <input type="hidden" name="tanggal" value="{{ $tanggal }}">
+    <!-- Kanan: Pengeluaran & Input Pengeluaran -->
+    <div>
+        <div style="font-weight: 600; margin-bottom: 12px; font-size: 16px;">2. Catatan Pengeluaran Toko</div>
         
-        <select name="pemilik" class="input-angka-tabel" style="padding: 8px 12px; font-size: 14px;">
-            <option value="Kado Koeni">Beban Kado Koeni</option>
-            <option value="Mitra Anda">Beban Mitra Anda</option>
-        </select>
+        <!-- Input Cepat Pengeluaran -->
+        <form action="/laporan/pengeluaran" method="POST" style="display: flex; gap: 8px; margin-bottom: 16px;">
+            @csrf
+            <input type="hidden" name="tanggal" value="{{ $tanggal }}">
+            <select name="pemilik" style="padding: 6px; border: 1px solid var(--garis); width: 80px; font-size: 12px;">
+                <option value="Kado Koeni">Kado</option>
+                <option value="Mitra Anda">Mitra</option>
+            </select>
+            <input type="text" name="keterangan" placeholder="Beli plastik..." required style="flex: 1; padding: 6px; border: 1px solid var(--garis); font-size: 12px;">
+            <input type="number" name="nominal" placeholder="Rp..." required style="width: 80px; padding: 6px; border: 1px solid var(--garis); font-size: 12px;">
+            <button type="submit" class="btn-sekunder" style="padding: 6px 12px;">+</button>
+        </form>
 
-        <input type="text" name="keterangan" placeholder="Keterangan pengeluaran (misal: Laundry, Plastik)" required class="input-angka-tabel" style="flex: 1; min-width: 260px; padding: 8px 12px;">
+        <div style="border: 1px solid var(--garis); max-height: 245px; overflow-y: auto; background: #fff;">
+            <table class="tabel-polos">
+                <tbody>
+                    @forelse($expenses as $exp)
+                    <tr>
+                        <td>
+                            <strong>{{ $exp->keterangan }}</strong><br>
+                            <span class="teks-redup" style="font-size: 11px;">Beban: {{ $exp->pemilik }}</span>
+                        </td>
+                        <td class="angka" style="color: var(--aksen); font-weight: 500;">
+                            -Rp {{ number_format($exp->nominal, 0, ',', '.') }}
+                        </td>
+                        <td style="width: 30px; text-align: center;">
+                            <button type="button" onclick="hapusPengeluaran({{ $exp->id }})" class="btn-batal-teks">✕</button>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="3" style="text-align: center; padding: 24px; color: var(--teks-redup);">Tidak ada pengeluaran.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-        <input type="number" name="nominal" placeholder="Nominal (Rp)" required class="input-angka-tabel angka rata-kanan" style="width: 160px; padding: 8px 12px;">
+<!-- ==========================================
+     BAGIAN 2: KERTAS KERJA EXCEL (KAS & DOMPET)
+     ========================================== -->
+<div style="font-weight: 600; margin-bottom: 12px; font-size: 16px;">3. Kertas Kerja Rekapitulasi (Buku Kas Induk)</div>
 
-        <button type="submit" class="btn-sekunder" style="padding: 9px 20px; font-size: 14px;">
-            Catat Pengeluaran
-        </button>
-    </form>
-</section>
-
-<!-- Form Tersembunyi untuk Penghapusan Baris Pengeluaran via JS -->
-<form id="form-hapus-exp" method="POST" style="display: none;">
+<form action="/laporan/cashflow" method="POST">
     @csrf
-    @method('DELETE')
+    <input type="hidden" name="tanggal" value="{{ $tanggal }}">
+
+    <table class="tabel-excel">
+        <thead>
+            <tr>
+                <th style="width: 35%; text-align: left; padding-left: 20px;">Uraian Arus Kas</th>
+                <th style="width: 20%;">Kado Koeni</th>
+                <th style="width: 20%;">Mitra Anda</th>
+                <th style="width: 25%; background-color: #EAE6DB;">TOTAL LACI FISIK</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+            <!-- BAGIAN A: LACI FISIK -->
+            <tr class="baris-kategori">
+                <td colspan="4" style="padding-left: 20px;">A. PERPUTARAN LACI KASIR (UANG BERSAMA)</td>
+            </tr>
+            <tr>
+                <td class="keterangan" style="padding-left: 24px;">
+                    1. Modal Awal / Sisa Laci H-1
+                    @php
+                        $tglKemarin = \Carbon\Carbon::parse($tanggal)->subDay()->toDateString();
+                        $cfH1 = \App\Models\DailyCashflow::where('tanggal', $tglKemarin)->first();
+                        $sisaH1Kado = $cfH1 ? ($cfH1->modal_awal_kado + \App\Models\TransactionDetail::whereDate('created_at', $tglKemarin)->whereHas('transaction', function($q) { $q->where('metode_pembayaran', 'Tunai'); })->where('pemilik', 'Kado Koeni')->sum('subtotal') - $cfH1->hasil_diambil_kado) : 0;
+                        $sisaH1Mitra = $cfH1 ? ($cfH1->modal_awal_mitra + \App\Models\TransactionDetail::whereDate('created_at', $tglKemarin)->whereHas('transaction', function($q) { $q->where('metode_pembayaran', 'Tunai'); })->where('pemilik', 'Mitra Anda')->sum('subtotal') - $cfH1->hasil_diambil_mitra) : 0;
+                    @endphp
+                    <div style="font-size: 11px; color: var(--teks-redup); font-weight: normal; margin-top: 4px;">
+                        Data sistem H-1 Kado: Rp {{ number_format($sisaH1Kado, 0, ',', '.') }}<br>
+                        Data sistem H-1 Mitra: Rp {{ number_format($sisaH1Mitra, 0, ',', '.') }}
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center;">
+                        <span class="teks-redup" style="font-size:12px; margin-right:4px;">Rp</span>
+                        <input type="number" name="modal_awal_kado" value="{{ $cashflow->modal_awal_kado }}" class="input-sel">
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center;">
+                        <span class="teks-redup" style="font-size:12px; margin-right:4px;">Rp</span>
+                        <input type="number" name="modal_awal_mitra" value="{{ $cashflow->modal_awal_mitra }}" class="input-sel">
+                    </div>
+                </td>
+                <td class="angka teks-redup" style="background-color: #F7F5F0;">—</td>
+            </tr>
+            <tr>
+                <td class="keterangan" style="padding-left: 24px;">2. Penjualan Tunai Hari Ini (Uang Masuk Laci)</td>
+                <td class="angka">Rp {{ number_format($pemasukanKado, 0, ',', '.') }}</td>
+                <td class="angka">Rp {{ number_format($pemasukanMitra, 0, ',', '.') }}</td>
+                <td class="angka teks-redup" style="background-color: #F7F5F0;">—</td>
+            </tr>
+            <tr>
+                <td class="keterangan" style="padding-left: 24px;">3. Dikurangi: Bagi Hasil yang Diambil / Pindah Dompet</td>
+                <td>
+                    <div style="display:flex; align-items:center;">
+                        <span style="color: var(--aksen); font-size:12px; margin-right:4px; font-weight:bold;">- Rp</span>
+                        <input type="number" name="hasil_diambil_kado" value="{{ $cashflow->hasil_diambil_kado }}" class="input-sel">
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center;">
+                        <span style="color: var(--aksen); font-size:12px; margin-right:4px; font-weight:bold;">- Rp</span>
+                        <input type="number" name="hasil_diambil_mitra" value="{{ $cashflow->hasil_diambil_mitra }}" class="input-sel">
+                    </div>
+                </td>
+                <td class="angka teks-redup" style="background-color: #F7F5F0;">—</td>
+            </tr>
+            
+            <tr class="baris-total">
+                <td class="keterangan" style="padding-left: 24px; font-size: 15px;">SISA KAS LACI MENGINAP UNTUK BESOK (1+2-3)</td>
+                <td class="angka">Rp {{ number_format($sisaModalKado ?? 0, 0, ',', '.') }}</td>
+                <td class="angka">Rp {{ number_format($sisaModalMitra ?? 0, 0, ',', '.') }}</td>
+                <td class="angka" style="background-color: #EAE6DB; font-size: 20px; font-family: 'Fraunces', serif;">
+                    Rp {{ number_format($totalSisaModal ?? 0, 0, ',', '.') }}
+                </td>
+            </tr>
+
+            <!-- BAGIAN B: DOMPET PRIBADI -->
+            <tr class="baris-kategori">
+                <td colspan="4" style="padding-left: 20px; border-top: 4px solid var(--teks); margin-top: 8px;">
+                    B. PERPUTARAN DOMPET PRIBADI (UANG BAGI HASIL)
+                </td>
+            </tr>
+            <tr>
+                <td class="keterangan" style="padding-left: 24px;">1. Uang Bagi Hasil Masuk (Dari poin A.3)</td>
+                <td class="angka" style="color: #4A6E48;">+ Rp {{ number_format($cashflow->hasil_diambil_kado ?? 0, 0, ',', '.') }}</td>
+                <td class="angka" style="color: #4A6E48;">+ Rp {{ number_format($cashflow->hasil_diambil_mitra ?? 0, 0, ',', '.') }}</td>
+                <td class="angka teks-redup" rowspan="4" style="background-color: #F7F5F0; text-align: center; vertical-align: middle;">
+                    (Area Dompet<br>Tidak Masuk Hitungan Laci)
+                </td>
+            </tr>
+            <tr>
+                <td class="keterangan" style="padding-left: 24px;">2. Dikurangi: Beban Pengeluaran Toko</td>
+                <td class="angka" style="color: var(--aksen);">- Rp {{ number_format($pengeluaranKado, 0, ',', '.') }}</td>
+                <td class="angka" style="color: var(--aksen);">- Rp {{ number_format($pengeluaranMitra, 0, ',', '.') }}</td>
+            </tr>
+            <tr>
+                <td class="keterangan" style="padding-left: 24px;">3. Dikurangi: Penarikan Uang Dadakan / Kasbon</td>
+                <td>
+                    <div style="display:flex; align-items:center;">
+                        <span style="color: var(--aksen); font-size:12px; margin-right:4px; font-weight:bold;">- Rp</span>
+                        <input type="number" name="tarik_dadakan_kado" value="{{ $cashflow->tarik_dadakan_kado ?? 0 }}" class="input-sel">
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center;">
+                        <span style="color: var(--aksen); font-size:12px; margin-right:4px; font-weight:bold;">- Rp</span>
+                        <input type="number" name="tarik_dadakan_mitra" value="{{ $cashflow->tarik_dadakan_mitra ?? 0 }}" class="input-sel">
+                    </div>
+                </td>
+            </tr>
+            
+            <tr class="baris-total" style="background-color: var(--permukaan);">
+                <td class="keterangan" style="padding-left: 24px;">SISA BERSIH DI DOMPET PRIBADI (1-2-3)</td>
+                <td class="angka" style="font-size: 16px;">Rp {{ number_format($sisaDompetKado ?? 0, 0, ',', '.') }}</td>
+                <td class="angka" style="font-size: 16px;">Rp {{ number_format($sisaDompetMitra ?? 0, 0, ',', '.') }}</td>
+            </tr>
+
+        </tbody>
+    </table>
+
+    <div style="max-width: 400px; margin: 0 0 0 auto;">
+        <button type="submit" class="btn-utama">SIMPAN KERTAS KERJA HARI INI</button>
+        <div style="text-align: center; margin-top: 12px; font-size: 12px; color: var(--teks-redup);">
+            Data Laci dan Dompet akan otomatis terhitung setelah disimpan.
+        </div>
+    </div>
+
 </form>
+
+<!-- Form Tersembunyi Penghapusan Beban -->
+<form id="form-hapus-exp" method="POST" style="display: none;">
+    @csrf @method('DELETE')
+</form>
+
 @endsection
 
 @section('scripts')
 <script>
     function hapusPengeluaran(id) {
-        if (confirm('Hapus catatan pengeluaran ini dari buku kas?')) {
+        if (confirm('Hapus catatan beban ini?')) {
             const form = document.getElementById('form-hapus-exp');
             form.action = '/laporan/pengeluaran/' + id;
             form.submit();

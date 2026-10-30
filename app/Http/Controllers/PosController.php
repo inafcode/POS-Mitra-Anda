@@ -167,12 +167,12 @@ class PosController extends Controller
                                             ->filter(fn($d) => ($d->transaction->metode_pembayaran ?? 'Tunai') === 'Tunai');
 
                 $masukKadoKemarin = $detailsKemarinTunai->where('pemilik', 'Kado Koeni')->sum('subtotal');
-                $keluarKadoKemarin = Expense::whereDate('tanggal', $kemarin->tanggal)->where('pemilik', 'Kado Koeni')->sum('nominal');
-                $sisaModalKadoKemarin = ($kemarin->modal_awal_kado + $masukKadoKemarin - $keluarKadoKemarin) - $kemarin->hasil_diambil_kado;
+                // PERBAIKAN: Laci menginap tidak dikurangi pengeluaran, karena pengeluaran dibayar dari dompet
+                $sisaModalKadoKemarin = $kemarin->modal_awal_kado + $masukKadoKemarin - $kemarin->hasil_diambil_kado;
 
                 $masukMitraKemarin = $detailsKemarinTunai->where('pemilik', 'Mitra Anda')->sum('subtotal');
-                $keluarMitraKemarin = Expense::whereDate('tanggal', $kemarin->tanggal)->where('pemilik', 'Mitra Anda')->sum('nominal');
-                $sisaModalMitraKemarin = ($kemarin->modal_awal_mitra + $masukMitraKemarin - $keluarMitraKemarin) - $kemarin->hasil_diambil_mitra;
+                // PERBAIKAN: Laci menginap tidak dikurangi pengeluaran
+                $sisaModalMitraKemarin = $kemarin->modal_awal_mitra + $masukMitraKemarin - $kemarin->hasil_diambil_mitra;
             } else {
                 $sisaModalKadoKemarin = 0;
                 $sisaModalMitraKemarin = 0;
@@ -184,24 +184,33 @@ class PosController extends Controller
                 'modal_awal_mitra' => $sisaModalMitraKemarin,
                 'hasil_diambil_kado' => 0,
                 'hasil_diambil_mitra' => 0,
+                'tarik_dadakan_kado' => 0,   // Pastikan ini ada di database
+                'tarik_dadakan_mitra' => 0,  // Pastikan ini ada di database
             ]);
         }
 
-        $totalKado = $cashflow->modal_awal_kado + $pemasukanKado - $pengeluaranKado;
-        $totalMitra = $cashflow->modal_awal_mitra + $pemasukanMitra - $pengeluaranMitra;
-        $grandTotal = $totalKado + $totalMitra;
+        // 1. HITUNG LACI BERSAMA (Hanya Modal + Penjualan)
+        $totalLaciKado = $cashflow->modal_awal_kado + $pemasukanKado;
+        $totalLaciMitra = $cashflow->modal_awal_mitra + $pemasukanMitra;
+        $grandTotalLaci = $totalLaciKado + $totalLaciMitra;
 
-        $sisaModalKado = $totalKado - $cashflow->hasil_diambil_kado;
-        $sisaModalMitra = $totalMitra - $cashflow->hasil_diambil_mitra;
+        // 2. HITUNG SISA LACI MENGINAP (Total Laci dikurangi Bagi Hasil yang ditarik ke Dompet)
+        $sisaModalKado = $totalLaciKado - $cashflow->hasil_diambil_kado;
+        $sisaModalMitra = $totalLaciMitra - $cashflow->hasil_diambil_mitra;
         $totalSisaModal = $sisaModalKado + $sisaModalMitra;
+
+        // 3. HITUNG DOMPET PRIBADI (Bagi Hasil ditarik - Pengeluaran - Tarik Dadakan)
+        $sisaDompetKado = $cashflow->hasil_diambil_kado - $pengeluaranKado - ($cashflow->tarik_dadakan_kado ?? 0);
+        $sisaDompetMitra = $cashflow->hasil_diambil_mitra - $pengeluaranMitra - ($cashflow->tarik_dadakan_mitra ?? 0);
 
         return view('laporan', compact(
             'tanggal', 'details', 'expenses', 'cashflow',
             'pemasukanKado', 'pemasukanMitra',
             'nonTunaiKado', 'nonTunaiMitra',
             'pengeluaranKado', 'pengeluaranMitra',
-            'totalKado', 'totalMitra', 'grandTotal',
-            'sisaModalKado', 'sisaModalMitra', 'totalSisaModal'
+            'totalLaciKado', 'totalLaciMitra', 'grandTotalLaci', 
+            'sisaModalKado', 'sisaModalMitra', 'totalSisaModal',
+            'sisaDompetKado', 'sisaDompetMitra' 
         ));
     }
 
@@ -284,13 +293,19 @@ class PosController extends Controller
         $hasilKado = $cashflow ? $cashflow->hasil_diambil_kado : 0;
         $hasilMitra = $cashflow ? $cashflow->hasil_diambil_mitra : 0;
 
-        $totalKado = $modalAwalKado + $pemasukanKado - $pengeluaranKado;
-        $totalMitra = $modalAwalMitra + $pemasukanMitra - $pengeluaranMitra;
-        $grandTotal = $totalKado + $totalMitra;
+        // 1. HITUNG LACI BERSAMA (Hanya Modal + Penjualan) - DISAMAKAN DENGAN LOGIKA BARU
+        $totalLaciKado = $modalAwalKado + $pemasukanKado;
+        $totalLaciMitra = $modalAwalMitra + $pemasukanMitra;
+        $grandTotalLaci = $totalLaciKado + $totalLaciMitra;
 
-        $sisaModalKado = $totalKado - $hasilKado;
-        $sisaModalMitra = $totalMitra - $hasilMitra;
+        // 2. HITUNG SISA LACI MENGINAP (Total Laci - Bagi Hasil)
+        $sisaModalKado = $totalLaciKado - $hasilKado;
+        $sisaModalMitra = $totalLaciMitra - $hasilMitra;
         $totalSisaModal = $sisaModalKado + $sisaModalMitra;
+
+        // 3. HITUNG DOMPET PRIBADI (Bagi Hasil - Pengeluaran - Tarik Dadakan)
+        $sisaDompetKado = $hasilKado - $pengeluaranKado - ($cashflow->tarik_dadakan_kado ?? 0);
+        $sisaDompetMitra = $hasilMitra - $pengeluaranMitra - ($cashflow->tarik_dadakan_mitra ?? 0);
 
         $namaFile = 'Cashflow_' . date('d_m_Y', strtotime($tanggal)) . '.xls';
 
@@ -299,9 +314,10 @@ class PosController extends Controller
             'modalAwalKado', 'modalAwalMitra',
             'pemasukanKado', 'pemasukanMitra',
             'pengeluaranKado', 'pengeluaranMitra',
-            'totalKado', 'totalMitra', 'grandTotal',
+            'totalLaciKado', 'totalLaciMitra', 'grandTotalLaci', // Disesuaikan nama variabelnya
             'hasilKado', 'hasilMitra',
-            'sisaModalKado', 'sisaModalMitra', 'totalSisaModal'
+            'sisaModalKado', 'sisaModalMitra', 'totalSisaModal',
+            'sisaDompetKado', 'sisaDompetMitra' // Variabel baru dikirim
         ))->header('Content-Type', 'application/vnd.ms-excel')
           ->header('Content-Disposition', 'attachment; filename="' . $namaFile . '"');
     }
